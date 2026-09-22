@@ -228,10 +228,17 @@
     }
   }
 
+  let popoverRepositionHandler = null;
+
   /**
    * Closes any open notes/status popover.
    */
   function closePopover() {
+    if (popoverRepositionHandler) {
+      window.removeEventListener('scroll', popoverRepositionHandler, true);
+      window.removeEventListener('resize', popoverRepositionHandler);
+      popoverRepositionHandler = null;
+    }
     if (currentPopover && currentPopover.parentNode) {
       currentPopover.parentNode.removeChild(currentPopover);
       currentPopover = null;
@@ -254,15 +261,36 @@
     const popover = document.createElement('div');
     popover.id = 'jt-ln-popover';
 
-    const rect = anchorBtn.getBoundingClientRect();
-    if (anchorBtn === currentInlineBtn) {
-      popover.style.top = `${window.scrollY + rect.bottom + 8}px`;
-      popover.style.left = `${window.scrollX + Math.max(16, rect.left)}px`;
-    } else {
-      const bottomOffset = window.innerHeight - rect.top + 8;
-      popover.style.bottom = `${bottomOffset}px`;
-      popover.style.right = '24px';
-    }
+    const positionPopover = () => {
+      if (!anchorBtn || !anchorBtn.isConnected) return;
+      const rect = anchorBtn.getBoundingClientRect();
+      const popoverWidth = 320;
+      const popoverHeight = 290;
+
+      let top = rect.bottom + 8;
+      let left = rect.left;
+
+      // Flip above button if not enough space below
+      if (top + popoverHeight > window.innerHeight - 16) {
+        top = Math.max(16, rect.top - popoverHeight - 8);
+      }
+
+      // Horizontal screen boundary check
+      if (left + popoverWidth > window.innerWidth - 16) {
+        left = Math.max(16, window.innerWidth - popoverWidth - 16);
+      }
+      if (left < 16) {
+        left = 16;
+      }
+
+      popover.style.top = `${Math.round(top)}px`;
+      popover.style.left = `${Math.round(left)}px`;
+    };
+
+    positionPopover();
+    popoverRepositionHandler = positionPopover;
+    window.addEventListener('scroll', popoverRepositionHandler, { passive: true, capture: true });
+    window.addEventListener('resize', popoverRepositionHandler, { passive: true });
 
     const optionsHtml = STATUS_OPTIONS.map(opt => `
       <option value="${opt}" ${opt === currentStatus ? 'selected' : ''}>${opt}</option>
@@ -470,77 +498,104 @@
   /**
    * Locates the action buttons row inside the job details card.
    */
+  /**
+   * Locates the action buttons row inside the job details card.
+   * Guarantees target is a direct peer sibling in the main flex container,
+   * completely preventing overlap with LinkedIn's native Save or Apply buttons.
+   */
   function getJobActionBar() {
     const detailRoot = document.querySelector(
-      '.jobs-search__job-details, .jobs-details__main-content, .job-details-jobs-unified-top-card, .jobs-unified-top-card, .jobs-description, main, [class*="job-details"]'
+      '.scaffold-layout__detail, .jobs-search__job-details, .jobs-details__main-content, .job-details-jobs-unified-top-card, .jobs-unified-top-card, main, [class*="job-details"]'
     ) || document;
 
-    const allButtons = Array.from(detailRoot.querySelectorAll('button'));
-    let anchorBtn = null;
+    // 1. Direct row container selectors
+    const rowSelectors = [
+      '.job-details-jobs-unified-top-card__action-buttons',
+      '.jobs-unified-top-card__action-buttons',
+      '[class*="action-buttons"]',
+      '.job-details-jobs-unified-top-card__container--two-pane .mt5',
+      '.job-details-jobs-unified-top-card .mt5',
+      '.top-card-layout__entity-actions'
+    ];
 
-    // 1. Check for Save button by text, aria-label, or class
-    for (const btn of allButtons) {
-      if (btn.id === 'jt-ln-inline-btn') continue;
-      const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-      const cls = (btn.className || '').toLowerCase();
-
-      if (text === 'save' || aria.startsWith('save') || cls.includes('save-button')) {
-        anchorBtn = btn;
+    let rowContainer = null;
+    for (const sel of rowSelectors) {
+      const el = detailRoot.querySelector(sel);
+      if (el && el.querySelector('button, [class*="button"]')) {
+        rowContainer = el;
         break;
       }
     }
 
-    // 2. Fallback: Check for Apply button
-    if (!anchorBtn) {
-      for (const btn of allButtons) {
-        if (btn.id === 'jt-ln-inline-btn') continue;
-        const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-        const cls = (btn.className || '').toLowerCase();
+    // 2. Identify Save button and Apply button in detailRoot
+    const allButtons = Array.from(detailRoot.querySelectorAll('button:not(#jt-ln-inline-btn), a[class*="apply"]'));
+    let saveBtn = null;
+    let applyBtn = null;
 
-        if (text.includes('apply') || aria.includes('apply') || cls.includes('apply-button') || cls.includes('s-apply')) {
-          anchorBtn = btn;
-          break;
-        }
+    for (const btn of allButtons) {
+      const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+      const cls = (btn.className || '').toLowerCase();
+
+      if (!saveBtn && (text === 'save' || aria.includes('save') || cls.includes('save'))) {
+        saveBtn = btn;
+      }
+      if (!applyBtn && (text.includes('apply') || aria.includes('apply') || cls.includes('apply'))) {
+        applyBtn = btn;
       }
     }
 
-    if (!anchorBtn) {
-      anchorBtn = detailRoot.querySelector('.jobs-save-button, .jobs-apply-button');
-    }
+    const anchorBtn = saveBtn || applyBtn;
+    if (!anchorBtn && !rowContainer) return null;
 
-    if (!anchorBtn) return null;
-
-    // 3. Find the main flex button container holding the action buttons
-    let container = anchorBtn.closest(
-      '.job-details-jobs-unified-top-card__action-buttons, [class*="action-buttons"], .jobs-unified-top-card__content--two-pane .jobs-box__html-content, .top-card-layout__entity-actions'
-    );
-
-    if (!container) {
-      let p = anchorBtn.parentElement;
-      while (p && p !== detailRoot && p !== document.body) {
-        const d = window.getComputedStyle(p).display;
-        if (d === 'flex' || d === 'inline-flex') {
-          container = p;
+    // 3. If rowContainer not found via selectors, climb up from anchorBtn
+    // until we reach the multi-button parent row (avoiding single button wrappers!)
+    if (!rowContainer && anchorBtn) {
+      let curr = anchorBtn.parentElement;
+      while (curr && curr !== detailRoot && curr !== document.body) {
+        const isButtonWrapper = curr.matches('[class*="save-button"], [class*="apply-button"], .artdeco-button');
+        const childBtns = curr.querySelectorAll('button:not(#jt-ln-inline-btn), a[class*="button"]');
+        if (!isButtonWrapper && childBtns.length >= 2) {
+          rowContainer = curr;
           break;
         }
+        curr = curr.parentElement;
+      }
+    }
+
+    if (!rowContainer && anchorBtn) {
+      rowContainer = anchorBtn.closest('[class*="actions"]') || anchorBtn.parentElement?.parentElement || anchorBtn.parentElement;
+    }
+
+    if (!rowContainer) return null;
+
+    // 4. Enforce flexbox layout on rowContainer so it never overlaps or breaks across screen widths
+    try {
+      rowContainer.style.setProperty('display', 'flex', 'important');
+      rowContainer.style.setProperty('flex-wrap', 'wrap', 'important');
+      rowContainer.style.setProperty('align-items', 'center', 'important');
+      rowContainer.style.setProperty('gap', '8px', 'important');
+    } catch (e) {
+      // ignore
+    }
+
+    // 5. Find the direct child of rowContainer that wraps the Save button (or Apply button)
+    let siblingWrapper = null;
+    const targetAnchor = saveBtn || applyBtn;
+    if (targetAnchor) {
+      let p = targetAnchor;
+      while (p && p.parentElement && p.parentElement !== rowContainer) {
         p = p.parentElement;
       }
+      if (p && p.parentElement === rowContainer) {
+        siblingWrapper = p;
+      }
     }
 
-    if (!container) {
-      container = anchorBtn.parentElement;
-    }
-
-    // 4. Identify the DIRECT child of container that wraps the anchor button
-    // This is critical so we insert as a sibling in the flex row, NOT trapped inside a narrow wrapper div!
-    let topChild = anchorBtn;
-    while (topChild && topChild.parentElement && topChild.parentElement !== container) {
-      topChild = topChild.parentElement;
-    }
-
-    return { container, target: topChild || anchorBtn, method: 'after' };
+    return {
+      container: rowContainer,
+      target: siblingWrapper || rowContainer.lastElementChild
+    };
   }
 
   /**
@@ -562,17 +617,29 @@
       currentInlineBtn = document.createElement('button');
       currentInlineBtn.id = 'jt-ln-inline-btn';
       currentInlineBtn.type = 'button';
-      currentInlineBtn.innerHTML = `${ICONS.bookmark}<span>Save Job</span>`;
+      currentInlineBtn.setAttribute('aria-label', 'Save job to Google Sheet');
+      currentInlineBtn.innerHTML = `
+        <span class="jt-ln-btn-main-action">${ICONS.bookmark}<span>Save Job</span></span>
+        <span class="jt-ln-btn-pre-note" title="Save with custom note & status">${ICONS.edit}</span>
+      `;
 
       currentInlineBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
         // If clicking note icon, let note icon handler handle it
         if (e.target.closest('.jt-ln-btn-pre-note, .jt-ln-btn-edit-note')) return;
         e.stopPropagation();
         e.preventDefault();
         handleSaveClick();
       });
+
+      const preNoteBtn = currentInlineBtn.querySelector('.jt-ln-btn-pre-note');
+      if (preNoteBtn) {
+        preNoteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
+          openNotesPopover(currentUrl, 'Saved', '', null, currentInlineBtn);
+        });
+      }
     }
 
     const target = actionInfo.target;

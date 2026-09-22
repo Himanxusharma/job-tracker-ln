@@ -68,13 +68,14 @@
   position: relative !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 6px !important;
+  justify-content: center !important;
+  gap: 0 !important;
   height: 36px !important;
-  padding: 0 16px !important;
-  margin-left: 8px !important;
-  margin-right: 0 !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  box-sizing: border-box !important;
+  padding: 0 6px 0 14px !important;
+  margin: 0 !important;
   flex-shrink: 0 !important;
   background-color: #0B0F19 !important;
   color: #F9FAFB !important;
@@ -89,7 +90,7 @@
   transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
   vertical-align: middle !important;
   user-select: none !important;
-  z-index: 100 !important;
+  z-index: 10 !important;
   white-space: nowrap !important;
 }
 
@@ -97,23 +98,30 @@
   background-color: #111827 !important;
   border-color: #38BDF8 !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 10px rgba(10, 102, 194, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4) !important;
 }
 
 #jt-ln-inline-btn:active {
   transform: translateY(0) scale(0.98) !important;
 }
 
+#jt-ln-inline-btn:focus-visible {
+  outline: 2px solid #38BDF8 !important;
+  outline-offset: 2px !important;
+}
+
 #jt-ln-inline-btn.jt-ln-btn-loading {
   opacity: 0.8 !important;
   cursor: wait !important;
   pointer-events: none !important;
+  padding: 0 16px !important;
 }
 
 #jt-ln-inline-btn.jt-ln-btn-saved {
   background-color: #064E3B !important;
   border-color: #10B981 !important;
   color: #ECFDF5 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35) !important;
 }
 
 #jt-ln-inline-btn svg {
@@ -126,56 +134,43 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
+  height: 100% !important;
 }
 
-.jt-ln-btn-pre-note {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin-left: 6px !important;
-  padding: 4px 6px !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.22) !important;
-  cursor: pointer !important;
-  opacity: 0.8 !important;
-  transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease !important;
-  border-radius: 0 4px 4px 0 !important;
-}
-
-.jt-ln-btn-pre-note:hover {
-  opacity: 1 !important;
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  color: #38BDF8 !important;
-}
-
+.jt-ln-btn-pre-note,
 .jt-ln-btn-edit-note {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  margin-left: 6px !important;
-  padding: 4px 6px !important;
+  height: 22px !important;
+  margin-left: 8px !important;
+  padding: 0 6px !important;
   border-left: 1px solid rgba(255, 255, 255, 0.22) !important;
   cursor: pointer !important;
   opacity: 0.85 !important;
-  transition: opacity 150ms ease, background-color 150ms ease !important;
-  border-radius: 0 4px 4px 0 !important;
+  transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease !important;
+  border-radius: 0 9999px 9999px 0 !important;
 }
 
+.jt-ln-btn-pre-note:hover,
 .jt-ln-btn-edit-note:hover {
   opacity: 1 !important;
-  background-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  color: #38BDF8 !important;
 }
 
-/* Toast Container */
+/* Toast Container - Positioned top-right below LinkedIn navbar, away from bottom chat dock */
 #jt-ln-toast-container {
   position: fixed !important;
-  bottom: 84px !important;
-  right: 24px !important;
+  top: 68px !important;
+  right: 20px !important;
+  bottom: auto !important;
   z-index: 2147483645 !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 10px !important;
   max-width: 380px !important;
-  width: calc(100vw - 48px) !important;
+  width: calc(100vw - 40px) !important;
   pointer-events: none !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }
@@ -589,4 +584,63 @@
   background-color: #1F2937 !important;
   color: #F9FAFB !important;
 }
+
+/* ==========================================================================
+   Responsive Adaptations (Tablet, Mobile, Split-Screen)
+   Ensures zero component overlap and seamless wrapping on any screen size
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  #jt-ln-inline-btn {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    font-size: 13px !important;
+    padding: 0 4px 0 12px !important;
+  }
+
+  .jt-ln-btn-pre-note,
+  .jt-ln-btn-edit-note {
+    height: 18px !important;
+    padding: 0 4px !important;
+    margin-left: 6px !important;
+  }
+
+  #jt-ln-toast-container {
+    top: 56px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+  }
+
+  #jt-ln-popover {
+    width: calc(100vw - 24px) !important;
+    max-width: 320px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #jt-ln-toast-container {
+    top: 52px !important;
+    right: 8px !important;
+    left: 8px !important;
+    width: calc(100vw - 16px) !important;
+  }
+
+  .jt-ln-toast-body {
+    padding: 10px 12px !important;
+  }
+
+  .jt-ln-toast-actions {
+    gap: 4px !important;
+  }
+
+  .jt-ln-btn-undo,
+  .jt-ln-btn-note {
+    padding: 4px 7px !important;
+    font-size: 11px !important;
+  }
+}
+
 
