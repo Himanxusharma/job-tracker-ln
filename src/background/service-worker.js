@@ -10,7 +10,8 @@ import {
   deleteJobRow,
   verifyAndSetupSheet,
   fetchAllSheetJobs,
-  updateJobStatusAndNotes
+  updateJobStatusAndNotes,
+  repairSheetFormatting
 } from './sheets-api.js';
 
 import {
@@ -229,6 +230,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         const token = await getAuthToken(true);
+        await repairSheetFormatting(token, sheetId);
         const existingJobs = await fetchAllSheetJobs(token, sheetId);
         await replaceSavedJobsCache(existingJobs);
 

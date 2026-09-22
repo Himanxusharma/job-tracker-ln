@@ -14,7 +14,7 @@
   let cachedSavedUrls = {};
   let isDragging = false;
   let dragStartY = 0;
-  let initialBtnBottom = 24;
+  let initialBtnBottom = 84;
   let hasMoved = false;
 
   const STATUS_OPTIONS = [
@@ -324,7 +324,7 @@
       hasMoved = false;
       dragStartY = e.clientY;
       const computedBottom = parseInt(window.getComputedStyle(btn).bottom, 10);
-      initialBtnBottom = isNaN(computedBottom) ? 24 : computedBottom;
+      initialBtnBottom = isNaN(computedBottom) ? 84 : computedBottom;
 
       btn.classList.add('jt-ln-dragging');
       document.addEventListener('mousemove', onMouseMove);

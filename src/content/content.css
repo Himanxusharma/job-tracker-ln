@@ -6,7 +6,7 @@
 /* Floating Save Action Button */
 #jt-ln-floating-btn {
   position: fixed !important;
-  bottom: 24px !important;
+  bottom: 84px !important;
   right: 24px !important;
   z-index: 2147483640 !important;
   display: flex !important;

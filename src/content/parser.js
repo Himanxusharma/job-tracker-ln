@@ -57,19 +57,30 @@
       'h1.job-details-jobs-unified-top-card__job-title',
       '.jobs-unified-top-card__job-title',
       '.jobs-details__main-content h1',
+      '.jobs-search__job-details h1',
       'h1.t-24.t-bold',
+      'h1.t-24',
       'h1[class*="job-title"]',
       '.jobs-search__job-details--title',
-      '.top-card-layout__title'
+      '.top-card-layout__title',
+      'h1[tabindex="-1"]'
     ];
 
     for (const selector of selectors) {
-      const el = root.querySelector(selector);
+      const el = root.querySelector(selector) || document.querySelector(selector);
       if (el) {
         const text = cleanText(el.innerText || el.textContent);
         if (text && text.length > 1) return text;
       }
     }
+
+    // Try any h1 inside the job detail container or document
+    const h1 = (container && container.querySelector('h1')) || document.querySelector('.jobs-search__job-details h1, .jobs-details h1, main h1, h1');
+    if (h1) {
+      const text = cleanText(h1.innerText || h1.textContent);
+      if (text && text.length > 1 && !/feed|messaging|notifications|search/i.test(text)) return text;
+    }
+
     return '';
   }
 
@@ -90,7 +101,7 @@
     ];
 
     for (const selector of selectors) {
-      const el = root.querySelector(selector);
+      const el = root.querySelector(selector) || document.querySelector(selector);
       if (el) {
         const text = cleanText(el.innerText || el.textContent);
         if (text && text.length > 0 && !text.toLowerCase().includes('feedback')) return text;
@@ -111,11 +122,13 @@
       '.job-details-jobs-unified-top-card__primary-description span:nth-of-type(1)',
       '.jobs-unified-top-card__primary-description span:nth-of-type(1)',
       '.topcard__flavor--bullet',
-      'span[class*="workplace-type"]'
+      'span[class*="workplace-type"]',
+      '.job-details-jobs-unified-top-card__workplace-type',
+      '[class*="job-details"] [class*="bullet"]'
     ];
 
     for (const selector of selectors) {
-      const el = root.querySelector(selector);
+      const el = root.querySelector(selector) || document.querySelector(selector);
       if (el) {
         const text = cleanText(el.innerText || el.textContent);
         if (text && text.length > 1 && !text.toLowerCase().includes('alumni')) return text;
@@ -123,9 +136,9 @@
     }
 
     // Secondary fallback: search primary description container for text near company
-    const primaryDesc = root.querySelector('.job-details-jobs-unified-top-card__primary-description');
+    const primaryDesc = root.querySelector('.job-details-jobs-unified-top-card__primary-description, [class*="primary-description"]') || document.querySelector('.job-details-jobs-unified-top-card__primary-description, [class*="primary-description"]');
     if (primaryDesc) {
-      const spans = Array.from(primaryDesc.querySelectorAll('span'));
+      const spans = Array.from(primaryDesc.querySelectorAll('span, div.tvm__text'));
       for (const s of spans) {
         const txt = cleanText(s.innerText || s.textContent);
         if (txt && !txt.includes('·') && txt.length > 2 && !/applicants|reposted|hours|days|weeks|ago/i.test(txt)) {
@@ -147,15 +160,25 @@
     // Direct job URL
     if (/\/jobs\/view\/\d+/i.test(path)) return true;
 
-    // Search or collection view with an active job open
+    // Search or collection view with an active job open in URL query
     if (search.includes('currentJobId=') || search.includes('jobId=')) {
-      const hasJobDetails = document.querySelector('.jobs-search__job-details, .jobs-details__main-content, .job-details-jobs-unified-top-card');
-      return Boolean(hasJobDetails);
+      return true;
     }
 
-    // Direct standalone layout
-    if (document.querySelector('.job-details-jobs-unified-top-card, .jobs-details__main-content')) {
-      return true;
+    // Direct standalone layout or 2-pane search details pane
+    const jobDetailsSelectors = [
+      '.job-details-jobs-unified-top-card',
+      '.jobs-details__main-content',
+      '.jobs-search__job-details',
+      '.jobs-details',
+      '.job-view-layout',
+      '[class*="job-details"]',
+      '.jobs-description',
+      '.jobs-apply-button'
+    ];
+
+    for (const sel of jobDetailsSelectors) {
+      if (document.querySelector(sel)) return true;
     }
 
     return false;
@@ -170,10 +193,29 @@
       '.jobs-search__job-details, .jobs-details__main-content, .job-view-layout, main'
     ) || document;
 
-    const role = extractRole(container);
-    const company = extractCompany(container);
-    const location = extractLocation(container);
+    let role = extractRole(container);
+    let company = extractCompany(container);
+    let location = extractLocation(container);
     const jobLink = normalizeJobUrl(window.location.href);
+
+    // Document title fallback if any field was not found via DOM
+    if (!role || !company || !location) {
+      const docTitle = document.title || '';
+      // Pattern 1: "<Company> hiring <Role> in <Location> | LinkedIn"
+      const hireMatch = docTitle.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+([^|]+?)(?:\s*\|\s*LinkedIn)?$/i);
+      if (hireMatch) {
+        if (!company) company = cleanText(hireMatch[1]);
+        if (!role) role = cleanText(hireMatch[2]);
+        if (!location) location = cleanText(hireMatch[3]);
+      } else {
+        // Pattern 2: "<Role> - <Company> | LinkedIn"
+        const dashMatch = docTitle.match(/^(.+?)\s+-\s+([^|]+?)(?:\s*\|\s*LinkedIn)?$/i);
+        if (dashMatch) {
+          if (!role) role = cleanText(dashMatch[1]);
+          if (!company) company = cleanText(dashMatch[2]);
+        }
+      }
+    }
 
     return {
       role,

@@ -241,7 +241,7 @@ export async function createJobTrackerSheet(token) {
  * Appends a job posting to the sheet.
  */
 export async function appendJobRow(token, sheetId, jobData) {
-  // Format Date: e.g. "2026-09-23 14:30"
+  // Format Date: e.g. "Sep 23, 2026"
   const now = new Date(jobData.dateSaved || Date.now());
   const dateFormatted = now.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -259,7 +259,8 @@ export async function appendJobRow(token, sheetId, jobData) {
     jobData.notes || ''
   ];
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  // Use OVERWRITE so it writes into existing empty grid rows without inheriting header styling
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:G:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE`;
   const result = await sheetsFetch(url, token, {
     method: 'POST',
     body: JSON.stringify({
@@ -267,12 +268,74 @@ export async function appendJobRow(token, sheetId, jobData) {
     })
   });
 
-  // Extract appended row number from updatedRange (e.g., "'Jobs'!A5:G5")
+  // Extract appended row number from updatedRange (e.g., "'Jobs'!A2:G2")
   let rowIndex = null;
   const updatedRange = result.updates?.updatedRange || '';
   const match = updatedRange.match(/!A(\d+):/i);
   if (match && match[1]) {
     rowIndex = parseInt(match[1], 10);
+  }
+
+  // Ensure data row has clean styling (white background, dark readable text, normal weight) and dropdown validation
+  if (rowIndex && rowIndex >= 2) {
+    try {
+      const meta = await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, token);
+      const tabId = meta.sheets?.[0]?.properties?.sheetId || 0;
+
+      await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId: tabId,
+                  startRowIndex: rowIndex - 1,
+                  endRowIndex: rowIndex,
+                  startColumnIndex: 0,
+                  endColumnIndex: 7
+                },
+                cell: {
+                  userEnteredFormat: {
+                    backgroundColor: { red: 1, green: 1, blue: 1 },
+                    textFormat: {
+                      foregroundColor: { red: 17 / 255, green: 24 / 255, blue: 39 / 255 },
+                      bold: false,
+                      fontSize: 10
+                    },
+                    horizontalAlignment: 'LEFT',
+                    verticalAlignment: 'MIDDLE'
+                  }
+                },
+                fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+              }
+            },
+            {
+              setDataValidation: {
+                range: {
+                  sheetId: tabId,
+                  startRowIndex: rowIndex - 1,
+                  endRowIndex: rowIndex,
+                  startColumnIndex: 5,
+                  endColumnIndex: 6
+                },
+                rule: {
+                  condition: {
+                    type: 'ONE_OF_LIST',
+                    values: STATUS_OPTIONS.map(opt => ({ userEnteredValue: opt }))
+                  },
+                  inputMessage: 'Select current application status',
+                  strict: false,
+                  showCustomUi: true
+                }
+              }
+            }
+          ]
+        })
+      });
+    } catch (fmtErr) {
+      console.warn('Row format batchUpdate non-fatal warning:', fmtErr);
+    }
   }
 
   return {
@@ -384,11 +447,116 @@ export async function verifyAndSetupSheet(token, sheetId) {
     );
   }
 
+  // Always ensure clean data formatting and dropdown validation across existing rows
+  await repairSheetFormatting(token, sheetId);
+
   return {
     sheetId,
     sheetUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/edit`,
     sheetTitle
   };
+}
+
+/**
+ * Repairs sheet formatting: ensures row 1 is blue header, and rows 2..end
+ * are clean data rows with working Status dropdown validation.
+ */
+export async function repairSheetFormatting(token, sheetId) {
+  try {
+    const meta = await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, token);
+    const tabId = meta.sheets?.[0]?.properties?.sheetId || 0;
+
+    const batchUpdateRequest = {
+      requests: [
+        // 1. Format Header Row 1 (LinkedIn Blue #0A66C2, Bold White Text, Centered)
+        {
+          repeatCell: {
+            range: {
+              sheetId: tabId,
+              startRowIndex: 0,
+              endRowIndex: 1,
+              startColumnIndex: 0,
+              endColumnIndex: 7
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: {
+                  red: 10 / 255,
+                  green: 102 / 255,
+                  blue: 194 / 255
+                },
+                textFormat: {
+                  foregroundColor: { red: 1, green: 1, blue: 1 },
+                  bold: true,
+                  fontSize: 11
+                },
+                horizontalAlignment: 'CENTER',
+                verticalAlignment: 'MIDDLE'
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+          }
+        },
+        // 2. Format Data Rows (Rows 2..500) with clean white background and dark text
+        {
+          repeatCell: {
+            range: {
+              sheetId: tabId,
+              startRowIndex: 1,
+              endRowIndex: 500,
+              startColumnIndex: 0,
+              endColumnIndex: 7
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 1, green: 1, blue: 1 },
+                textFormat: {
+                  foregroundColor: { red: 17 / 255, green: 24 / 255, blue: 39 / 255 },
+                  bold: false,
+                  fontSize: 10
+                },
+                horizontalAlignment: 'LEFT',
+                verticalAlignment: 'MIDDLE'
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+          }
+        },
+        // 3. Apply Status dropdown validation across all data rows (Column F = index 5, rows 2..500)
+        {
+          setDataValidation: {
+            range: {
+              sheetId: tabId,
+              startRowIndex: 1,
+              endRowIndex: 500,
+              startColumnIndex: 5,
+              endColumnIndex: 6
+            },
+            rule: {
+              condition: {
+                type: 'ONE_OF_LIST',
+                values: STATUS_OPTIONS.map(opt => ({ userEnteredValue: opt }))
+              },
+              inputMessage: 'Select current application status',
+              strict: false,
+              showCustomUi: true
+            }
+          }
+        }
+      ]
+    };
+
+    await sheetsFetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify(batchUpdateRequest)
+      }
+    );
+  } catch (err) {
+    console.warn('repairSheetFormatting non-fatal warning:', err);
+  }
 }
 
 /**
