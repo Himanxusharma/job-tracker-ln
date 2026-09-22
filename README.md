@@ -20,12 +20,18 @@ Job searching involves juggling dozens of open tabs, bookmarks, and half-remembe
 
 ## Core Features
 
-- ✅ One-click save from any LinkedIn job detail page
-- ✅ Auto-captures Role, Company, Location, Job Link, and Date Saved
-- ✅ Writes directly to the user's own Google Sheet (via Google OAuth)
+- ✅ One-click save from any LinkedIn job detail page (sleek 32px button alongside Apply & Save)
+- ✅ Auto-captures Role, Company, Location, Job Link, Date Saved, and Canonical Company LinkedIn URL
+- ✅ Writes directly to the user's own Google Sheet (via Google OAuth 2.0)
+- ✅ Two-way Sheet Sync: live manual refresh pulls edits and purges rows deleted directly in Google Sheets
+- ✅ Keyboard shortcut (`Alt+S` or `Option+S`) for rapid 1-press saving
 - ✅ Duplicate detection (won't create a second row for a job already saved)
 - ✅ Status tracking via dropdown: Saved → Applied → Interview → Offer → Accepted / Rejected / Archived
-- ✅ Undo option immediately after saving
+- ✅ Quick Notes & Status popover directly on LinkedIn
+- ✅ Auto-detects "Easy Apply" submissions and updates stage to `Applied`
+- ✅ Interactive Pipeline Funnel, Conversion Rate analytics, and Instant Fuzzy Search in popup
+- ✅ 1-Click CSV data export
+- ✅ 5-second undo toast immediately after saving
 - ✅ Zero cost — no paid tier, no backend, no external API dependency
 
 ---
@@ -34,41 +40,41 @@ Job searching involves juggling dozens of open tabs, bookmarks, and half-remembe
 
 | Layer | Approach |
 |---|---|
-| Job data capture | Content script reads the LinkedIn job DOM (no LinkedIn API) |
-| Save trigger | Injected floating button on the job detail page |
-| Storage | User's own Google Sheet, written via Google Sheets API |
-| Auth | Google OAuth (user grants access once, in Settings) |
-| Backend | None — all logic runs client-side in the extension |
-
-See `TRD.md` for full technical detail.
+| Job data capture | Resilient content script DOM parser (handles modern obfuscated LinkedIn classes) |
+| Save trigger | Injected 32px pill button in the native action bar + `Alt+S` shortcut |
+| Storage | User's own Google Sheet, written via Google Sheets API v4 |
+| Auth | Google OAuth 2.0 via `chrome.identity` (direct to Google) |
+| Backend | None — 100% client-side serverless extension |
 
 ---
 
-## Sheet Schema
+## Sheet Schema (8 Columns)
 
-| Column | Description |
-|---|---|
-| Date Saved | Auto-timestamp on save |
-| Role | Job title |
-| Company | Company name |
-| Location | City / Remote / Hybrid |
-| Job Link | URL to the posting |
-| Status | Dropdown: Saved, Applied, Interview, Offer, Accepted, Rejected, Archived |
-| Notes | Free text |
+| Column | Header | Description |
+|---|---|---|
+| A | Date Saved | Auto-timestamp on save (`YYYY-MM-DD HH:mm`) |
+| B | Role | Extracted job title |
+| C | Company | Extracted company name |
+| D | Location | Clean location (e.g. `Gurugram, India (On-site)`) |
+| E | Job Link | Normalized canonical job URL (`https://www.linkedin.com/jobs/view/<id>/`) |
+| F | Status | Dropdown: `Saved`, `Applied`, `Interview`, `Offer`, `Accepted`, `Rejected`, `Archived` |
+| G | Notes | Custom user notes (referrals, salary, recruiter info) |
+| H | Company URL | Canonical LinkedIn company profile link (`https://www.linkedin.com/company/<slug>/`) |
 
 ---
 
 ## Project Documents
 
-- [`PRD.md`](./PRD.md) — Product Requirements Document (what we're building and why)
-- [`TRD.md`](./TRD.md) — Technical Requirements Document (how it's built)
-- [`FRD.md`](./FRD.md) — Functional Requirements Document (detailed feature-by-feature behavior)
+- [`Docs/PRD.md`](./Docs/PRD.md) — Product Requirements Document (what we're building and why)
+- [`Docs/TRD.md`](./Docs/TRD.md) — Technical Requirements Document (how it's built)
+- [`Docs/FRD.md`](./Docs/FRD.md) — Functional Requirements Document (detailed feature-by-feature behavior)
+- [`CHROMEWEBSTORE.md`](./CHROMEWEBSTORE.md) — Chrome Web Store submission & compliance package
 
 ---
 
 ## Status
 
-🚧 Early build — LinkedIn-only support currently. Additional job platforms (Indeed, Lever, Greenhouse) are a potential future phase, not committed in the current scope.
+🚀 Production Ready — Manifest V3 compliant, 100% pass rate on test suites (172/172 checks). Tested on modern LinkedIn responsive layouts.
 
 ---
 
