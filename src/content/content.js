@@ -787,7 +787,7 @@
     }
 
     setButtonState('loading');
-    const jobData = window.JobTrackerParser.parseCurrentJob();
+    const jobData = window.JobTrackerParser.parseCurrentJob(currentInlineBtn || currentFloatingBtn);
 
     try {
       chrome.runtime.sendMessage(
