@@ -369,34 +369,6 @@ body::-webkit-scrollbar-thumb:hover {
   gap: 8px;
 }
 
-.jt-btn-sync-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: var(--jt-radius-full);
-  background: rgba(56, 189, 248, 0.12);
-  color: var(--jt-accent-sky);
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  line-height: 1;
-}
-
-.jt-btn-sync-pill:hover {
-  background: rgba(56, 189, 248, 0.22);
-  border-color: var(--jt-accent-sky);
-  color: #FFFFFF;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.25);
-}
-
-.jt-btn-sync-pill svg {
-  width: 12px;
-  height: 12px;
-}
-
 .jt-sheet-meta-row {
   display: flex;
   align-items: center;

@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConnectExisting = document.getElementById('btn-connect-existing');
   const btnSyncCache = document.getElementById('btn-sync-cache');
   const btnSyncHeader = document.getElementById('btn-sync-header');
-  const btnSyncCard = document.getElementById('btn-sync-card');
   const btnSyncActivity = document.getElementById('btn-sync-activity');
   const sheetLastSyncTime = document.getElementById('sheet-last-sync-time');
   const btnDisconnect = document.getElementById('btn-disconnect');
@@ -478,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const allSyncButtons = [
       btnSyncHeader,
-      btnSyncCard,
       btnSyncActivity,
       btnSyncCache
     ].filter(Boolean);
@@ -513,7 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnSyncHeader) btnSyncHeader.addEventListener('click', triggerSync);
-  if (btnSyncCard) btnSyncCard.addEventListener('click', triggerSync);
   if (btnSyncActivity) btnSyncActivity.addEventListener('click', triggerSync);
   if (btnSyncCache) btnSyncCache.addEventListener('click', triggerSync);
 
