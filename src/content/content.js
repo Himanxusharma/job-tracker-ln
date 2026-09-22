@@ -706,9 +706,10 @@
         btn.innerHTML = `${dragHandle}${ICONS.spinner}<span>Saving...</span>`;
       } else if (state === 'saved') {
         btn.classList.add('jt-ln-btn-saved');
+        const displayStatus = (!statusText || statusText.toLowerCase() === 'saved') ? 'Saved' : statusText;
         btn.innerHTML = `
           ${dragHandle}
-          <span class="jt-ln-btn-main-action">${ICONS.check}<span>Saved (${statusText || 'In Sheet'})</span></span>
+          <span class="jt-ln-btn-main-action">${ICONS.check}<span>${displayStatus}</span></span>
           <span class="jt-ln-btn-edit-note" title="Update status or add note">${ICONS.edit}</span>
         `;
 
@@ -926,7 +927,8 @@
       if (savedInfo) {
         const badge = document.createElement('span');
         badge.className = 'jt-ln-list-badge';
-        badge.innerHTML = `${ICONS.check} Saved (${savedInfo.status || 'Saved'})`;
+        const displayStatus = (!savedInfo.status || savedInfo.status.toLowerCase() === 'saved') ? 'Saved' : savedInfo.status;
+        badge.innerHTML = `${ICONS.check} ${displayStatus}`;
 
         const targetContainer = item.querySelector('.artdeco-entity-lockup__subtitle, .job-card-container__primary-description, .base-search-card__subtitle') || item;
         targetContainer.appendChild(badge);
