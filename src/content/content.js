@@ -378,72 +378,76 @@
    * Locates the action buttons row inside the job details card.
    */
   function getJobActionBar() {
-    // 1. Search inside the active job details pane first
     const detailRoot = document.querySelector(
       '.jobs-search__job-details, .jobs-details__main-content, .job-details-jobs-unified-top-card, .jobs-unified-top-card, .jobs-description, main, [class*="job-details"]'
     ) || document;
 
     const allButtons = Array.from(detailRoot.querySelectorAll('button'));
+    let anchorBtn = null;
 
-    // Check for Save button by text, aria-label, or class
+    // 1. Check for Save button by text, aria-label, or class
     for (const btn of allButtons) {
+      if (btn.id === 'jt-ln-inline-btn') continue;
       const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
       const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
       const cls = (btn.className || '').toLowerCase();
 
       if (text === 'save' || aria.startsWith('save') || cls.includes('save-button')) {
-        return { container: btn.parentElement, target: btn, method: 'after' };
+        anchorBtn = btn;
+        break;
       }
     }
 
-    // Check for Apply button by text, aria-label, or class
-    for (const btn of allButtons) {
-      const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-      const cls = (btn.className || '').toLowerCase();
+    // 2. Fallback: Check for Apply button
+    if (!anchorBtn) {
+      for (const btn of allButtons) {
+        if (btn.id === 'jt-ln-inline-btn') continue;
+        const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const cls = (btn.className || '').toLowerCase();
 
-      if (text.includes('apply') || aria.includes('apply') || cls.includes('apply-button') || cls.includes('s-apply')) {
-        return { container: btn.parentElement, target: btn, method: 'after' };
+        if (text.includes('apply') || aria.includes('apply') || cls.includes('apply-button') || cls.includes('s-apply')) {
+          anchorBtn = btn;
+          break;
+        }
       }
     }
 
-    // Direct selectors
-    const saveBtn = document.querySelector(
-      '.jobs-save-button, button[aria-label*="Save"], button[class*="save-button"], [data-control-name="save_job"]'
+    if (!anchorBtn) {
+      anchorBtn = detailRoot.querySelector('.jobs-save-button, .jobs-apply-button');
+    }
+
+    if (!anchorBtn) return null;
+
+    // 3. Find the main flex button container holding the action buttons
+    let container = anchorBtn.closest(
+      '.job-details-jobs-unified-top-card__action-buttons, [class*="action-buttons"], .jobs-unified-top-card__content--two-pane .jobs-box__html-content, .top-card-layout__entity-actions'
     );
-    if (saveBtn && saveBtn.parentElement) {
-      return { container: saveBtn.parentElement, target: saveBtn, method: 'after' };
-    }
 
-    const applyBtn = document.querySelector(
-      '.jobs-apply-button, button[aria-label*="Apply"], .jobs-s-apply, [data-control-name="jobdetails_topcard_apply"]'
-    );
-    if (applyBtn && applyBtn.parentElement) {
-      return { container: applyBtn.parentElement, target: applyBtn, method: 'after' };
-    }
-
-    // Fallback container selectors
-    const selectors = [
-      '.job-details-jobs-unified-top-card__action-buttons',
-      '.jobs-unified-top-card__content--two-pane .jobs-box__html-content',
-      '.jobs-details__main-content .jobs-apply-button',
-      '.jobs-s-apply',
-      '.top-card-layout__entity-actions',
-      '.jobs-unified-top-card__content--two-pane',
-      '[class*="action-buttons"]'
-    ];
-
-    for (const sel of selectors) {
-      const el = detailRoot.querySelector(sel) || document.querySelector(sel);
-      if (el) {
-        return {
-          container: el.tagName === 'BUTTON' ? el.parentElement : el,
-          target: null,
-          method: 'append'
-        };
+    if (!container) {
+      let p = anchorBtn.parentElement;
+      while (p && p !== detailRoot && p !== document.body) {
+        const d = window.getComputedStyle(p).display;
+        if (d === 'flex' || d === 'inline-flex') {
+          container = p;
+          break;
+        }
+        p = p.parentElement;
       }
     }
-    return null;
+
+    if (!container) {
+      container = anchorBtn.parentElement;
+    }
+
+    // 4. Identify the DIRECT child of container that wraps the anchor button
+    // This is critical so we insert as a sibling in the flex row, NOT trapped inside a narrow wrapper div!
+    let topChild = anchorBtn;
+    while (topChild && topChild.parentElement && topChild.parentElement !== container) {
+      topChild = topChild.parentElement;
+    }
+
+    return { container, target: topChild || anchorBtn, method: 'after' };
   }
 
   /**
@@ -461,11 +465,7 @@
       return false;
     }
 
-    if (!currentInlineBtn || !document.body.contains(currentInlineBtn)) {
-      if (currentInlineBtn && currentInlineBtn.parentNode) {
-        currentInlineBtn.parentNode.removeChild(currentInlineBtn);
-      }
-
+    if (!currentInlineBtn) {
       currentInlineBtn = document.createElement('button');
       currentInlineBtn.id = 'jt-ln-inline-btn';
       currentInlineBtn.type = 'button';
@@ -476,13 +476,16 @@
         e.preventDefault();
         handleSaveClick();
       });
-
-      if (actionInfo.target && actionInfo.method === 'after') {
-        actionInfo.target.insertAdjacentElement('afterend', currentInlineBtn);
-      } else {
-        actionInfo.container.appendChild(currentInlineBtn);
-      }
     }
+
+    const target = actionInfo.target;
+    // Insert directly as a sibling of the top-level button wrapper
+    if (target && target.nextElementSibling !== currentInlineBtn) {
+      target.insertAdjacentElement('afterend', currentInlineBtn);
+    } else if (!actionInfo.container.contains(currentInlineBtn)) {
+      actionInfo.container.appendChild(currentInlineBtn);
+    }
+
     return true;
   }
 

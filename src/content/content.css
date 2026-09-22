@@ -65,12 +65,17 @@
 
 /* Inline Action Button (in Job Details Action Bar) */
 #jt-ln-inline-btn {
+  position: relative !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
   height: 36px !important;
   padding: 0 16px !important;
   margin-left: 8px !important;
+  margin-right: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  flex-shrink: 0 !important;
   background-color: #0B0F19 !important;
   color: #F9FAFB !important;
   border: 1.5px solid #0A66C2 !important;
