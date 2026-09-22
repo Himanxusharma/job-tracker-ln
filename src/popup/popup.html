@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Tracker LN</title>
+  <link rel="stylesheet" href="../../assets/styles/design-tokens.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="jt-app-container">
+    <!-- Header -->
+    <header class="jt-header">
+      <div class="jt-brand">
+        <div class="jt-logo-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          </svg>
+        </div>
+        <div class="jt-brand-info">
+          <h1 class="jt-app-title">Job Tracker LN</h1>
+          <span class="jt-version-tag">v1.0 • LinkedIn Edition</span>
+        </div>
+      </div>
+      <div id="jt-connection-pill" class="jt-status-pill jt-pill-disconnected">
+        <span class="jt-status-dot"></span>
+        <span class="jt-status-text">Not Connected</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="jt-nav-tabs" role="tablist">
+      <button type="button" class="jt-tab-btn jt-tab-active" id="tab-btn-home" role="tab" aria-selected="true" aria-controls="tab-content-home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Overview</span>
+      </button>
+      <button type="button" class="jt-tab-btn" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="tab-content-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- Main Content Body -->
+    <main class="jt-main-content">
+      <!-- HOME TAB -->
+      <section id="tab-content-home" class="jt-tab-panel" role="tabpanel" aria-labelledby="tab-btn-home">
+        <!-- Connected Sheet Summary Card -->
+        <div id="card-connected-sheet" class="jt-card jt-card-sheet" style="display: none;">
+          <div class="jt-card-header">
+            <span class="jt-card-label">Active Destination</span>
+            <span class="jt-badge-green">Sync Active</span>
+          </div>
+          <div class="jt-sheet-row">
+            <div class="jt-sheet-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </div>
+            <div class="jt-sheet-details">
+              <div id="sheet-title-text" class="jt-sheet-name">Job Tracker LN</div>
+              <a id="sheet-external-link" href="#" target="_blank" rel="noopener noreferrer" class="jt-sheet-link">
+                <span>Open in Google Sheets</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setup Prompt Card (if disconnected) -->
+        <div id="card-setup-prompt" class="jt-card jt-card-prompt">
+          <div class="jt-prompt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div class="jt-prompt-content">
+            <h2 class="jt-prompt-title">Connect your Google Sheet</h2>
+            <p class="jt-prompt-desc">One click sets up your private Google Sheet with status tracking dropdowns.</p>
+          </div>
+          <button type="button" id="btn-quick-setup" class="jt-btn jt-btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Auto-Create Sheet</span>
+          </button>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="jt-metrics-grid">
+          <div class="jt-metric-box">
+            <div class="jt-metric-label">Tracked Jobs</div>
+            <div id="metric-jobs-count" class="jt-metric-value">0</div>
+          </div>
+          <div class="jt-metric-box">
+            <div class="jt-metric-label">Default Status</div>
+            <div class="jt-metric-badge">Saved</div>
+          </div>
+        </div>
+
+        <!-- Recent Jobs Activity -->
+        <div class="jt-card jt-card-activity">
+          <div class="jt-card-header">
+            <span class="jt-card-label">Recent Applications</span>
+            <span id="activity-count-text" class="jt-text-muted-sm">0 saved</span>
+          </div>
+          <div id="recent-jobs-list" class="jt-jobs-list">
+            <div class="jt-empty-state">
+              <p>No jobs tracked yet. Open any LinkedIn job posting to save it directly!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supported Job Sites Section (PRD §8 / FR-7) -->
+        <div class="jt-card jt-card-supported">
+          <div class="jt-card-header">
+            <span class="jt-card-label">Supported Platforms</span>
+          </div>
+          <div class="jt-platform-item">
+            <div class="jt-platform-icon jt-icon-linkedin">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+              </svg>
+            </div>
+            <div class="jt-platform-info">
+              <div class="jt-platform-name">LinkedIn Jobs</div>
+              <div class="jt-platform-desc">Auto-extracts Role, Company, Location, and Link</div>
+            </div>
+            <span class="jt-badge-active">Active</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS TAB -->
+      <section id="tab-content-settings" class="jt-tab-panel" role="tabpanel" aria-labelledby="tab-btn-settings" style="display: none;">
+        <!-- Destination Sheet Config Card -->
+        <div class="jt-card">
+          <h2 class="jt-card-title">Google Sheet Connection</h2>
+          <p class="jt-card-subtitle">Connect your Google account and select or generate a destination spreadsheet.</p>
+
+          <div class="jt-form-group">
+            <button type="button" id="btn-create-sheet" class="jt-btn jt-btn-primary jt-btn-full">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Create New Google Sheet</span>
+            </button>
+          </div>
+
+          <div class="jt-divider">
+            <span>OR CONNECT EXISTING</span>
+          </div>
+
+          <div class="jt-form-group">
+            <label for="input-existing-sheet" class="jt-label">Google Sheet URL or ID</label>
+            <div class="jt-input-group">
+              <input type="text" id="input-existing-sheet" class="jt-input" placeholder="https://docs.google.com/spreadsheets/d/..." autocomplete="off">
+              <button type="button" id="btn-connect-existing" class="jt-btn jt-btn-secondary">Link</button>
+            </div>
+          </div>
+
+          <div class="jt-btn-row">
+            <button type="button" id="btn-sync-cache" class="jt-btn jt-btn-ghost">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>Refresh Cache from Sheet</span>
+            </button>
+            <button type="button" id="btn-disconnect" class="jt-btn jt-btn-danger">
+              <span>Disconnect</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Clarification & Help Guide (FR-6.4) -->
+        <div class="jt-card">
+          <h2 class="jt-card-title">Status Workflow Guide</h2>
+          <div class="jt-status-guide">
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-saved">Saved</span>
+              <span class="jt-guide-text">Default on save. Discovered postings to review.</span>
+            </div>
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-applied">Applied</span>
+              <span class="jt-guide-text">Application submitted directly to company or via LinkedIn.</span>
+            </div>
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-interview">Interview</span>
+              <span class="jt-guide-text">Active conversations, screenings, or rounds scheduled.</span>
+            </div>
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-offer">Offer</span>
+              <span class="jt-guide-text">Written or verbal employment offer received.</span>
+            </div>
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-accepted">Accepted</span>
+              <span class="jt-guide-text">Offer signed and confirmed.</span>
+            </div>
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-rejected">Rejected</span>
+              <span class="jt-guide-text">Explicit "no" received from the employer.</span>
+            </div>
+            <div class="jt-guide-row">
+              <span class="jt-status-tag tag-archived">Archived</span>
+              <span class="jt-guide-text">Position closed or you decided not to pursue further.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy & Security Notice -->
+        <div class="jt-card jt-card-privacy">
+          <div class="jt-privacy-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span class="jt-card-label">Zero-Telemetry Guarantee</span>
+          </div>
+          <p class="jt-privacy-text">
+            Job Tracker LN runs 100% in your browser. No data, links, or credentials ever touch any external servers. Everything is stored directly in your own Google Drive account.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Feedback Notification Bar -->
+    <footer id="jt-status-bar" class="jt-footer-status">
+      <span id="jt-status-bar-text">Ready to track LinkedIn postings.</span>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
