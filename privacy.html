@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Job Tracker LN</title>
+  <style>
+    :root {
+      --bg: #0B0F19;
+      --card: #111827;
+      --text: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --accent: #0A66C2;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--card);
+      padding: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+    h1 {
+      color: #FFFFFF;
+      font-size: 28px;
+      margin-top: 0;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+    h2 {
+      color: #38BDF8;
+      font-size: 20px;
+      margin-top: 28px;
+    }
+    p, li {
+      color: #D1D5DB;
+      font-size: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 14px;
+    }
+    th {
+      background: rgba(255, 255, 255, 0.05);
+      color: #FFFFFF;
+    }
+    a {
+      color: #38BDF8;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="badge">Privacy First • Zero Telemetry</span>
+    <h1>Privacy Policy for Job Tracker LN</h1>
+    <p><strong>Last updated:</strong> September 23, 2026</p>
+
+    <p><strong>Job Tracker LN</strong> is a free, privacy-first browser extension designed to help job seekers save and manage LinkedIn job listings directly in their own Google Sheet.</p>
+    <p>We believe your personal job search data belongs solely to you. <strong>We do not collect, sell, or transmit your personal data to any external server or third party.</strong></p>
+
+    <h2>1. Single Purpose Declaration</h2>
+    <p>The sole purpose of Job Tracker LN is to allow users to capture publicly visible job information (such as job title, company name, location, and URL) from LinkedIn job postings and record them into a private Google Sheets document owned and controlled by the user.</p>
+
+    <h2>2. Data We Access &amp; Storage Location</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Data Type</th>
+          <th>Purpose</th>
+          <th>Storage Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Job Details</strong> (Role, Company, Location, URL)</td>
+          <td>Extracted only upon clicking "Save Job" or pressing Alt+S.</td>
+          <td>Appended directly to your personal Google Sheet.</td>
+        </tr>
+        <tr>
+          <td><strong>Sheet ID &amp; Settings</strong></td>
+          <td>Knows which user-owned Google Sheet to write to.</td>
+          <td>Stored locally via <code>chrome.storage.local</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>URL Deduplication Cache</strong></td>
+          <td>Prevents accidental duplicate saves.</td>
+          <td>Stored locally via <code>chrome.storage.local</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Google OAuth Token</strong></td>
+          <td>Authorizes requests directly to Google Sheets API v4.</td>
+          <td>Managed securely by Google via <code>chrome.identity</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. 100% Client-Side Architecture</h2>
+    <ul>
+      <li><strong>No Backend Server:</strong> The extension operates entirely within your browser. There is no middleman server or external database.</li>
+      <li><strong>Direct to Google:</strong> All API communications occur strictly between your browser and official Google APIs (<code>sheets.googleapis.com</code>).</li>
+      <li><strong>Data Ownership:</strong> You own the Google Sheet. You can edit, export, or delete your data at any time.</li>
+    </ul>
+
+    <h2>4. Telemetry, Tracking &amp; Cookies</h2>
+    <ul>
+      <li><strong>No Analytics:</strong> No tracking SDKs (Google Analytics, Sentry, Mixpanel, etc.) are included.</li>
+      <li><strong>No Advertising:</strong> We do not display ads or monetize data.</li>
+      <li><strong>No Cookies:</strong> We do not track cross-site cookies.</li>
+    </ul>
+
+    <h2>5. User Controls &amp; Revocation</h2>
+    <p>You can revoke the extension's access to your Google account at any time via <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account Permissions</a>. You can also export your complete job data to CSV with 1 click in the extension popup.</p>
+
+    <h2>6. Contact</h2>
+    <p>For questions or source code verification, visit the official repository: <a href="https://github.com/Himanxusharma/job-tracker-ln" target="_blank" rel="noopener noreferrer">https://github.com/Himanxusharma/job-tracker-ln</a>.</p>
+  </div>
+</body>
+</html>

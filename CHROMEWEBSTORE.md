@@ -59,6 +59,11 @@ When publishing to the Chrome Web Store:
 
 ## Privacy Policy & Single Purpose
 
+### Privacy Policy URLs (Use in Chrome Web Store Dashboard)
+- **Primary Public URL:** `https://github.com/Himanxusharma/job-tracker-ln/blob/main/PRIVACY.md`
+- **Hosted HTML (GitHub Pages):** `https://himanxusharma.github.io/job-tracker-ln/privacy.html`
+- **Raw Markdown URL:** `https://raw.githubusercontent.com/Himanxusharma/job-tracker-ln/main/PRIVACY.md`
+
 ### Single Purpose Declaration
 Job Tracker LN has a single purpose: to allow job seekers to record LinkedIn job listings directly into their own Google Sheets spreadsheet.
 
