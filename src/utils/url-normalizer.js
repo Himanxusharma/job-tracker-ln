@@ -51,3 +51,28 @@ export function normalizeJobUrl(rawUrl) {
     return rawUrl.trim();
   }
 }
+
+/**
+ * Normalizes a LinkedIn company URL to canonical format:
+ * https://www.linkedin.com/company/<slug>/
+ *
+ * @param {string} rawUrl
+ * @returns {string} Normalized canonical company URL, or empty string if invalid.
+ */
+export function normalizeCompanyUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return '';
+  }
+
+  try {
+    const url = new URL(rawUrl, 'https://www.linkedin.com');
+    const match = url.pathname.match(/\/company\/([a-zA-Z0-9-_]+)/i);
+    if (match && match[1]) {
+      return `https://www.linkedin.com/company/${match[1]}/`;
+    }
+    return url.origin + url.pathname.replace(/\/+$/, '') + '/';
+  } catch (err) {
+    return rawUrl.trim();
+  }
+}
+

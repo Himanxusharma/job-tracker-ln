@@ -21,7 +21,8 @@ const HEADERS = [
   'Location',
   'Job Link',
   'Status',
-  'Notes'
+  'Notes',
+  'Company URL'
 ];
 
 /**
@@ -85,7 +86,7 @@ export async function createJobTrackerSheet(token) {
           title: 'Jobs',
           gridProperties: {
             frozenRowCount: 1,
-            columnCount: 7
+            columnCount: 8
           }
         }
       }
@@ -129,7 +130,7 @@ export async function createJobTrackerSheet(token) {
             startRowIndex: 0,
             endRowIndex: 1,
             startColumnIndex: 0,
-            endColumnIndex: 7
+            endColumnIndex: 8
           },
           cell: {
             userEnteredFormat: {
@@ -217,6 +218,18 @@ export async function createJobTrackerSheet(token) {
           properties: { pixelSize: 140 },
           fields: 'pixelSize'
         }
+      },
+      {
+        updateDimensionProperties: {
+          range: {
+            sheetId: tabId,
+            dimension: 'COLUMNS',
+            startIndex: 7,
+            endIndex: 8
+          },
+          properties: { pixelSize: 220 },
+          fields: 'pixelSize'
+        }
       }
     ]
   };
@@ -256,11 +269,12 @@ export async function appendJobRow(token, sheetId, jobData) {
     jobData.location || '',
     jobData.jobLink || '',
     jobData.status || 'Saved',
-    jobData.notes || ''
+    jobData.notes || '',
+    jobData.companyUrl || ''
   ];
 
   // Use OVERWRITE so it writes into existing empty grid rows without inheriting header styling
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:G:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:H:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE`;
   const result = await sheetsFetch(url, token, {
     method: 'POST',
     body: JSON.stringify({
@@ -268,7 +282,7 @@ export async function appendJobRow(token, sheetId, jobData) {
     })
   });
 
-  // Extract appended row number from updatedRange (e.g., "'Jobs'!A2:G2")
+  // Extract appended row number from updatedRange (e.g., "'Jobs'!A2:H2")
   let rowIndex = null;
   const updatedRange = result.updates?.updatedRange || '';
   const match = updatedRange.match(/!A(\d+):/i);
@@ -280,12 +294,54 @@ export async function appendJobRow(token, sheetId, jobData) {
   if (rowIndex && rowIndex >= 2) {
     try {
       const meta = await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, token);
-      const tabId = meta.sheets?.[0]?.properties?.sheetId || 0;
+      const tabProp = meta.sheets?.[0]?.properties;
+      const tabId = tabProp?.sheetId || 0;
+      const currentCols = tabProp?.gridProperties?.columnCount || 0;
+
+      const requests = [];
+
+      // If sheet only had 7 columns from older version, expand to 8 and set Company URL header
+      if (currentCols < 8) {
+        requests.push({
+          updateSheetProperties: {
+            properties: {
+              sheetId: tabId,
+              gridProperties: { columnCount: 8 }
+            },
+            fields: 'gridProperties.columnCount'
+          }
+        });
+        requests.push({
+          pasteData: {
+            data: 'Company URL',
+            type: 'PASTE_NORMAL',
+            delimiter: ',',
+            coordinate: {
+              sheetId: tabId,
+              rowIndex: 0,
+              columnIndex: 7
+            }
+          }
+        });
+        requests.push({
+          updateDimensionProperties: {
+            range: {
+              sheetId: tabId,
+              dimension: 'COLUMNS',
+              startIndex: 7,
+              endIndex: 8
+            },
+            properties: { pixelSize: 220 },
+            fields: 'pixelSize'
+          }
+        });
+      }
 
       await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, token, {
         method: 'POST',
         body: JSON.stringify({
           requests: [
+            ...requests,
             {
               repeatCell: {
                 range: {
@@ -293,7 +349,7 @@ export async function appendJobRow(token, sheetId, jobData) {
                   startRowIndex: rowIndex - 1,
                   endRowIndex: rowIndex,
                   startColumnIndex: 0,
-                  endColumnIndex: 7
+                  endColumnIndex: 8
                 },
                 cell: {
                   userEnteredFormat: {
@@ -464,94 +520,137 @@ export async function verifyAndSetupSheet(token, sheetId) {
 export async function repairSheetFormatting(token, sheetId) {
   try {
     const meta = await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, token);
-    const tabId = meta.sheets?.[0]?.properties?.sheetId || 0;
+    const tabProp = meta.sheets?.[0]?.properties;
+    const tabId = tabProp?.sheetId || 0;
+    const currentCols = tabProp?.gridProperties?.columnCount || 0;
 
-    const batchUpdateRequest = {
-      requests: [
-        // 1. Format Header Row 1 (LinkedIn Blue #0A66C2, Bold White Text, Centered)
-        {
-          repeatCell: {
-            range: {
-              sheetId: tabId,
-              startRowIndex: 0,
-              endRowIndex: 1,
-              startColumnIndex: 0,
-              endColumnIndex: 7
-            },
-            cell: {
-              userEnteredFormat: {
-                backgroundColor: {
-                  red: 10 / 255,
-                  green: 102 / 255,
-                  blue: 194 / 255
-                },
-                textFormat: {
-                  foregroundColor: { red: 1, green: 1, blue: 1 },
-                  bold: true,
-                  fontSize: 11
-                },
-                horizontalAlignment: 'CENTER',
-                verticalAlignment: 'MIDDLE'
-              }
-            },
-            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
-          }
-        },
-        // 2. Format Data Rows (Rows 2..500) with clean white background and dark text
-        {
-          repeatCell: {
-            range: {
-              sheetId: tabId,
-              startRowIndex: 1,
-              endRowIndex: 500,
-              startColumnIndex: 0,
-              endColumnIndex: 7
-            },
-            cell: {
-              userEnteredFormat: {
-                backgroundColor: { red: 1, green: 1, blue: 1 },
-                textFormat: {
-                  foregroundColor: { red: 17 / 255, green: 24 / 255, blue: 39 / 255 },
-                  bold: false,
-                  fontSize: 10
-                },
-                horizontalAlignment: 'LEFT',
-                verticalAlignment: 'MIDDLE'
-              }
-            },
-            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
-          }
-        },
-        // 3. Apply Status dropdown validation across all data rows (Column F = index 5, rows 2..500)
-        {
-          setDataValidation: {
-            range: {
-              sheetId: tabId,
-              startRowIndex: 1,
-              endRowIndex: 500,
-              startColumnIndex: 5,
-              endColumnIndex: 6
-            },
-            rule: {
-              condition: {
-                type: 'ONE_OF_LIST',
-                values: STATUS_OPTIONS.map(opt => ({ userEnteredValue: opt }))
-              },
-              inputMessage: 'Select current application status',
-              strict: false,
-              showCustomUi: true
-            }
-          }
+    const requests = [];
+
+    // Ensure at least 8 columns in the sheet grid
+    if (currentCols < 8) {
+      requests.push({
+        updateSheetProperties: {
+          properties: {
+            sheetId: tabId,
+            gridProperties: { columnCount: 8 }
+          },
+          fields: 'gridProperties.columnCount'
         }
-      ]
-    };
+      });
+    }
+
+    // 1. Ensure all 8 header values are set
+    requests.push({
+      pasteData: {
+        data: HEADERS.join(','),
+        type: 'PASTE_NORMAL',
+        delimiter: ',',
+        coordinate: {
+          sheetId: tabId,
+          rowIndex: 0,
+          columnIndex: 0
+        }
+      }
+    });
+
+    // 2. Format Header Row 1 (LinkedIn Blue #0A66C2, Bold White Text, Centered)
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId: tabId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: 8
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: {
+              red: 10 / 255,
+              green: 102 / 255,
+              blue: 194 / 255
+            },
+            textFormat: {
+              foregroundColor: { red: 1, green: 1, blue: 1 },
+              bold: true,
+              fontSize: 11
+            },
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE'
+          }
+        },
+        fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+      }
+    });
+
+    // 3. Format Data Rows (Rows 2..500) with clean white background and dark text
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId: tabId,
+          startRowIndex: 1,
+          endRowIndex: 500,
+          startColumnIndex: 0,
+          endColumnIndex: 8
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: { red: 1, green: 1, blue: 1 },
+            textFormat: {
+              foregroundColor: { red: 17 / 255, green: 24 / 255, blue: 39 / 255 },
+              bold: false,
+              fontSize: 10
+            },
+            horizontalAlignment: 'LEFT',
+            verticalAlignment: 'MIDDLE'
+          }
+        },
+        fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+      }
+    });
+
+    // 4. Apply Status dropdown validation across all data rows (Column F = index 5, rows 2..500)
+    requests.push({
+      setDataValidation: {
+        range: {
+          sheetId: tabId,
+          startRowIndex: 1,
+          endRowIndex: 500,
+          startColumnIndex: 5,
+          endColumnIndex: 6
+        },
+        rule: {
+          condition: {
+            type: 'ONE_OF_LIST',
+            values: STATUS_OPTIONS.map(opt => ({ userEnteredValue: opt }))
+          },
+          inputMessage: 'Select current application status',
+          strict: false,
+          showCustomUi: true
+        }
+      }
+    });
+
+    // 5. Ensure column width for Column H (Company URL)
+    requests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId: tabId,
+          dimension: 'COLUMNS',
+          startIndex: 7,
+          endIndex: 8
+        },
+        properties: { pixelSize: 220 },
+        fields: 'pixelSize'
+      }
+    });
 
     await sheetsFetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,
       token,
       {
         method: 'POST',
-        body: JSON.stringify(batchUpdateRequest)
+        body: JSON.stringify({ requests })
       }
     );
   } catch (err) {
@@ -566,7 +665,7 @@ export async function fetchAllSheetJobs(token, sheetId) {
   const meta = await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, token);
   const tabTitle = meta.sheets[0].properties.title;
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabTitle)}!A2:G`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabTitle)}!A2:H`;
   const result = await sheetsFetch(url, token);
   const rows = result.values || [];
 
@@ -579,6 +678,7 @@ export async function fetchAllSheetJobs(token, sheetId) {
     const jobLink = (row[4] || '').trim();
     const status = row[5] || 'Saved';
     const notes = row[6] || '';
+    const companyUrl = row[7] || '';
     const rowIndex = idx + 2;
 
     if (jobLink) {
@@ -586,12 +686,12 @@ export async function fetchAllSheetJobs(token, sheetId) {
         dateSaved,
         role,
         company,
+        companyUrl,
         location,
         status,
         notes,
         rowIndex
       };
-    }
   });
 
   return jobMap;

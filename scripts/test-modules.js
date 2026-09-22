@@ -2,7 +2,7 @@
  * Job Tracker LN - Automated Module Verification Script
  */
 
-import { normalizeJobUrl } from '../src/utils/url-normalizer.js';
+import { normalizeJobUrl, normalizeCompanyUrl } from '../src/utils/url-normalizer.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -75,6 +75,35 @@ const testCases = [
 
 testCases.forEach(tc => {
   const normalized = normalizeJobUrl(tc.raw);
+  assert(normalized === tc.expected, `${tc.label} -> got "${normalized}"`);
+});
+
+console.log('\n--- 3b. Testing Company URL Normalizer ---');
+const companyTestCases = [
+  {
+    raw: 'https://www.linkedin.com/company/adobe/life?trk=company_page',
+    expected: 'https://www.linkedin.com/company/adobe/',
+    label: 'Normalizes /life page and strips tracking'
+  },
+  {
+    raw: 'https://www.linkedin.com/company/accenture-in-india/about/',
+    expected: 'https://www.linkedin.com/company/accenture-in-india/',
+    label: 'Normalizes /about page to canonical slug'
+  },
+  {
+    raw: 'https://www.linkedin.com/company/google/',
+    expected: 'https://www.linkedin.com/company/google/',
+    label: 'Maintains canonical company URL with trailing slash'
+  },
+  {
+    raw: '',
+    expected: '',
+    label: 'Handles empty string gracefully'
+  }
+];
+
+companyTestCases.forEach(tc => {
+  const normalized = normalizeCompanyUrl(tc.raw);
   assert(normalized === tc.expected, `${tc.label} -> got "${normalized}"`);
 });
 

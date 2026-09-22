@@ -2,7 +2,7 @@
  * Job Tracker LN - End-to-End Workflow & DOM Simulation Test
  */
 
-import { normalizeJobUrl } from '../src/utils/url-normalizer.js';
+import { normalizeJobUrl, normalizeCompanyUrl } from '../src/utils/url-normalizer.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,8 +35,9 @@ function simulateParse(html, url) {
   const role = titleMatch ? titleMatch[1].trim() : '';
 
   // Company
-  const companyMatch = html.match(/class="job-details-jobs-unified-top-card__company-name"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i);
-  const company = companyMatch ? companyMatch[1].trim() : '';
+  const companyMatch = html.match(/class="job-details-jobs-unified-top-card__company-name"[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
+  const company = companyMatch ? companyMatch[2].trim() : '';
+  const companyUrl = companyMatch ? normalizeCompanyUrl(companyMatch[1]) : '';
 
   // Location
   const locationMatch = html.match(/class="job-details-jobs-unified-top-card__bullet"[^>]*>([\s\S]*?)<\/span>/i);
@@ -44,12 +45,13 @@ function simulateParse(html, url) {
 
   const jobLink = normalizeJobUrl(url);
 
-  return { role, company, location, jobLink, dateSaved: new Date().toISOString() };
+  return { role, company, companyUrl, location, jobLink, dateSaved: new Date().toISOString() };
 }
 
 const parsed = simulateParse(mockHtml, 'https://www.linkedin.com/jobs/view/4199999999/?trackingId=abc123xyz');
 assert(parsed.role === 'Senior Staff Systems Engineer', `Role correctly extracted: "${parsed.role}"`);
 assert(parsed.company === 'Anthropic', `Company correctly extracted: "${parsed.company}"`);
+assert(parsed.companyUrl === 'https://www.linkedin.com/company/anthropic/', `Company URL correctly extracted and normalized: "${parsed.companyUrl}"`);
 assert(parsed.location === 'San Francisco, CA (Hybrid)', `Location correctly extracted: "${parsed.location}"`);
 assert(parsed.jobLink === 'https://www.linkedin.com/jobs/view/4199999999/', `Job Link normalized: "${parsed.jobLink}"`);
 
