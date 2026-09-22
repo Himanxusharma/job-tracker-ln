@@ -75,7 +75,8 @@
   max-height: 36px !important;
   box-sizing: border-box !important;
   padding: 0 6px 0 14px !important;
-  margin: 0 !important;
+  margin: 0 0 0 8px !important;
+  max-width: fit-content !important;
   flex-shrink: 0 !important;
   background-color: #0B0F19 !important;
   color: #F9FAFB !important;

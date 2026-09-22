@@ -503,99 +503,76 @@
    * Guarantees target is a direct peer sibling in the main flex container,
    * completely preventing overlap with LinkedIn's native Save or Apply buttons.
    */
-  function getJobActionBar() {
+  /**
+   * Locates the exact target element to insert our inline button directly next to.
+   * Finds the native Save or Apply button and places our button right alongside it as a sibling,
+   * WITHOUT modifying or overriding any of LinkedIn's container layouts or styles.
+   */
+  function getInlineTarget() {
     const detailRoot = document.querySelector(
       '.scaffold-layout__detail, .jobs-search__job-details, .jobs-details__main-content, .job-details-jobs-unified-top-card, .jobs-unified-top-card, main, [class*="job-details"]'
     ) || document;
 
-    // 1. Direct row container selectors
-    const rowSelectors = [
-      '.job-details-jobs-unified-top-card__action-buttons',
-      '.jobs-unified-top-card__action-buttons',
-      '[class*="action-buttons"]',
-      '.job-details-jobs-unified-top-card__container--two-pane .mt5',
-      '.job-details-jobs-unified-top-card .mt5',
-      '.top-card-layout__entity-actions'
-    ];
+    // 1. Locate the native Save button
+    let saveBtn = null;
+    const candidates = Array.from(
+      detailRoot.querySelectorAll(
+        'button:not(#jt-ln-inline-btn), a[role="button"], a[class*="button"], a[class*="apply"], a[href*="apply"]'
+      )
+    );
 
-    let rowContainer = null;
-    for (const sel of rowSelectors) {
-      const el = detailRoot.querySelector(sel);
-      if (el && el.querySelector('button, [class*="button"]')) {
-        rowContainer = el;
+    for (const b of candidates) {
+      const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+      const text = (b.innerText || b.textContent || '').trim().toLowerCase();
+      if (
+        aria.includes('save the job') ||
+        aria.includes('unsave the job') ||
+        aria.includes('save job') ||
+        aria === 'save' ||
+        aria === 'saved' ||
+        text === 'save' ||
+        text === 'saved' ||
+        b.classList.contains('jobs-save-button__button')
+      ) {
+        saveBtn = b;
         break;
       }
     }
 
-    // 2. Identify Save button and Apply button in detailRoot
-    const allButtons = Array.from(detailRoot.querySelectorAll('button:not(#jt-ln-inline-btn), a[class*="apply"]'));
-    let saveBtn = null;
+    // 2. If Save button not found, find Apply button
     let applyBtn = null;
-
-    for (const btn of allButtons) {
-      const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-      const cls = (btn.className || '').toLowerCase();
-
-      if (!saveBtn && (text === 'save' || aria.includes('save') || cls.includes('save'))) {
-        saveBtn = btn;
-      }
-      if (!applyBtn && (text.includes('apply') || aria.includes('apply') || cls.includes('apply'))) {
-        applyBtn = btn;
-      }
-    }
-
-    const anchorBtn = saveBtn || applyBtn;
-    if (!anchorBtn && !rowContainer) return null;
-
-    // 3. If rowContainer not found via selectors, climb up from anchorBtn
-    // until we reach the multi-button parent row (avoiding single button wrappers!)
-    if (!rowContainer && anchorBtn) {
-      let curr = anchorBtn.parentElement;
-      while (curr && curr !== detailRoot && curr !== document.body) {
-        const isButtonWrapper = curr.matches('[class*="save-button"], [class*="apply-button"], .artdeco-button');
-        const childBtns = curr.querySelectorAll('button:not(#jt-ln-inline-btn), a[class*="button"]');
-        if (!isButtonWrapper && childBtns.length >= 2) {
-          rowContainer = curr;
+    if (!saveBtn) {
+      for (const b of candidates) {
+        const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+        const text = (b.innerText || b.textContent || '').trim().toLowerCase();
+        if (aria.includes('apply') || text.includes('apply') || b.classList.contains('jobs-apply-button')) {
+          applyBtn = b;
           break;
         }
-        curr = curr.parentElement;
       }
     }
 
-    if (!rowContainer && anchorBtn) {
-      rowContainer = anchorBtn.closest('[class*="actions"]') || anchorBtn.parentElement?.parentElement || anchorBtn.parentElement;
+    const anchor = saveBtn || applyBtn;
+    if (!anchor) return null;
+
+    // If anchor is wrapped in a dedicated button container (e.g. single-child wrapper div or .jobs-save-button),
+    // target that wrapper so our button sits as a peer alongside it without breaking button layout.
+    let target = anchor;
+    const designatedWrapper = anchor.closest(
+      '.jobs-save-button, [class*="save-button"], .jobs-apply-button--top-card, [class*="apply-button"]'
+    );
+
+    if (designatedWrapper) {
+      target = designatedWrapper;
+    } else if (
+      anchor.parentElement &&
+      anchor.parentElement.tagName === 'DIV' &&
+      (anchor.parentElement.children.length === 1 || anchor.parentElement.matches('[class*="button"]'))
+    ) {
+      target = anchor.parentElement;
     }
 
-    if (!rowContainer) return null;
-
-    // 4. Enforce flexbox layout on rowContainer so it never overlaps or breaks across screen widths
-    try {
-      rowContainer.style.setProperty('display', 'flex', 'important');
-      rowContainer.style.setProperty('flex-wrap', 'wrap', 'important');
-      rowContainer.style.setProperty('align-items', 'center', 'important');
-      rowContainer.style.setProperty('gap', '8px', 'important');
-    } catch (e) {
-      // ignore
-    }
-
-    // 5. Find the direct child of rowContainer that wraps the Save button (or Apply button)
-    let siblingWrapper = null;
-    const targetAnchor = saveBtn || applyBtn;
-    if (targetAnchor) {
-      let p = targetAnchor;
-      while (p && p.parentElement && p.parentElement !== rowContainer) {
-        p = p.parentElement;
-      }
-      if (p && p.parentElement === rowContainer) {
-        siblingWrapper = p;
-      }
-    }
-
-    return {
-      container: rowContainer,
-      target: siblingWrapper || rowContainer.lastElementChild
-    };
+    return target;
   }
 
   /**
@@ -603,9 +580,9 @@
    */
   function renderInlineButton() {
     const isDetail = window.JobTrackerParser?.isJobDetailView();
-    const actionInfo = getJobActionBar();
+    const target = getInlineTarget();
 
-    if (!isDetail || !actionInfo || !actionInfo.container) {
+    if (!isDetail || !target) {
       if (currentInlineBtn && currentInlineBtn.parentNode) {
         currentInlineBtn.parentNode.removeChild(currentInlineBtn);
         currentInlineBtn = null;
@@ -642,12 +619,9 @@
       }
     }
 
-    const target = actionInfo.target;
-    // Insert directly as a sibling of the top-level button wrapper
-    if (target && target.nextElementSibling !== currentInlineBtn) {
+    // Insert directly as an adjacent peer sibling after the target (next to Save/Apply)
+    if (target.nextElementSibling !== currentInlineBtn) {
       target.insertAdjacentElement('afterend', currentInlineBtn);
-    } else if (!actionInfo.container.contains(currentInlineBtn)) {
-      actionInfo.container.appendChild(currentInlineBtn);
     }
 
     return true;
