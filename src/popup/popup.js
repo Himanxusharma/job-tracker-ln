@@ -1,7 +1,7 @@
 /**
  * Job Tracker LN - Popup Controller
  * Manages tab switching, Google Sheet connection wizards,
- * pipeline funnel analytics, and real-time status updates.
+ * pipeline funnel analytics, instant search, and CSV exports.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,6 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const countOffer = document.getElementById('count-offer');
   const countAccepted = document.getElementById('count-accepted');
 
+  // DOM Elements - Search & Export
+  const inputJobSearch = document.getElementById('input-job-search');
+  const btnClearSearch = document.getElementById('btn-clear-search');
+  const btnExportCsv = document.getElementById('btn-export-csv');
+  const btnExportCsvSettings = document.getElementById('btn-export-csv-settings');
+
   // DOM Elements - Actions
   const btnQuickSetup = document.getElementById('btn-quick-setup');
   const btnCreateSheet = document.getElementById('btn-create-sheet');
@@ -44,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let allJobsList = [];
   let currentFilter = null;
+  let searchQuery = '';
 
   /**
    * Sets temporary status bar feedback message.
@@ -52,6 +59,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusBarText) {
       statusBarText.textContent = msg;
       statusBarText.style.color = isError ? '#F87171' : '#9CA3AF';
+    }
+  }
+
+  /**
+   * Formats ISO timestamp into friendly relative time.
+   */
+  function formatRelativeTime(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+
+      if (diffSec < 60) return 'Just now';
+      if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+      if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+      if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+      return `${Math.floor(diffSec / 604800)}w ago`;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
+   * Checks if an applied job is older than 7 days without update.
+   */
+  function isFollowupDue(job) {
+    if ((job.status || '').toLowerCase() !== 'applied') return false;
+    if (!job.dateSaved) return false;
+    try {
+      const d = new Date(job.dateSaved);
+      if (isNaN(d.getTime())) return false;
+      const days = (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24);
+      return days >= 7;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -122,25 +165,50 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Filters and renders recent jobs.
+   * Filters and renders recent jobs matching stage and search query.
    */
   function renderRecentJobs() {
     let displayJobs = allJobsList;
+
+    // Filter by stage
     if (currentFilter) {
-      displayJobs = allJobsList.filter(j => (j.status || 'Saved').toLowerCase() === currentFilter.toLowerCase());
+      displayJobs = displayJobs.filter(j => (j.status || 'Saved').toLowerCase() === currentFilter.toLowerCase());
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      displayJobs = displayJobs.filter(j =>
+        (j.role || '').toLowerCase().includes(q) ||
+        (j.company || '').toLowerCase().includes(q) ||
+        (j.location || '').toLowerCase().includes(q) ||
+        (j.notes || '').toLowerCase().includes(q)
+      );
     }
 
     if (!displayJobs || displayJobs.length === 0) {
+      let emptyMsg = 'No jobs tracked yet. Open any LinkedIn job posting to save it directly!';
+      if (searchQuery) {
+        emptyMsg = `No jobs matching "${searchQuery}".`;
+      } else if (currentFilter) {
+        emptyMsg = `No applications currently marked as "${currentFilter}".`;
+      }
+
       recentJobsList.innerHTML = `
         <div class="jt-empty-state">
-          <p>${currentFilter ? `No applications currently marked as "${currentFilter}".` : 'No jobs tracked yet. Open any LinkedIn job posting to save it directly!'}</p>
+          <p>${emptyMsg}</p>
         </div>
       `;
       return;
     }
 
-    recentJobsList.innerHTML = displayJobs.slice(0, 10).map(job => {
+    recentJobsList.innerHTML = displayJobs.slice(0, 15).map(job => {
       const statusClass = `tag-${(job.status || 'saved').toLowerCase()}`;
+      const relativeTime = formatRelativeTime(job.dateSaved);
+      const followupBadge = isFollowupDue(job)
+        ? `<span class="jt-badge-followup" title="Applied over 7 days ago. Consider reaching out!">Follow-up?</span>`
+        : '';
+
       return `
         <div class="jt-job-item">
           <div class="jt-job-item-details">
@@ -151,7 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
               ${escapeHtml(job.company || 'Company')} • ${escapeHtml(job.location || 'Remote')}
             </div>
           </div>
-          <span class="jt-status-tag ${statusClass}">${escapeHtml(job.status || 'Saved')}</span>
+          <div class="jt-job-item-tags">
+            <span class="jt-status-tag ${statusClass}">${escapeHtml(job.status || 'Saved')}</span>
+            ${followupBadge}
+            ${relativeTime ? `<span class="jt-job-date">${relativeTime}</span>` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -165,12 +237,32 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/"/g, '&quot;');
   }
 
+  // Setup Instant Search Input
+  if (inputJobSearch) {
+    inputJobSearch.addEventListener('input', () => {
+      searchQuery = inputJobSearch.value.trim();
+      if (btnClearSearch) {
+        btnClearSearch.style.display = searchQuery ? 'block' : 'none';
+      }
+      renderRecentJobs();
+    });
+  }
+
+  if (btnClearSearch) {
+    btnClearSearch.addEventListener('click', () => {
+      inputJobSearch.value = '';
+      searchQuery = '';
+      btnClearSearch.style.display = 'none';
+      renderRecentJobs();
+      inputJobSearch.focus();
+    });
+  }
+
   // Setup Funnel Step Filter Click
   funnelSteps.forEach(step => {
     step.addEventListener('click', () => {
       const filter = step.getAttribute('data-filter');
       if (currentFilter === filter) {
-        // Toggle off
         clearFilter();
       } else {
         currentFilter = filter;
@@ -201,6 +293,47 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFilter();
     });
   }
+
+  /**
+   * Exports all saved jobs to a clean CSV file.
+   */
+  function exportJobsToCsv() {
+    if (!allJobsList || allJobsList.length === 0) {
+      alert('No jobs to export. Save a LinkedIn job first!');
+      return;
+    }
+
+    const headers = ['Date Saved', 'Role', 'Company', 'Location', 'Job Link', 'Status', 'Notes'];
+    const csvRows = [headers.join(',')];
+
+    allJobsList.forEach(job => {
+      const row = [
+        `"${(job.dateSaved || '').replace(/"/g, '""')}"`,
+        `"${(job.role || '').replace(/"/g, '""')}"`,
+        `"${(job.company || '').replace(/"/g, '""')}"`,
+        `"${(job.location || '').replace(/"/g, '""')}"`,
+        `"${(job.jobLink || '').replace(/"/g, '""')}"`,
+        `"${(job.status || 'Saved').replace(/"/g, '""')}"`,
+        `"${(job.notes || '').replace(/"/g, '""')}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `job-tracker-ln-export-${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatusMessage(`Exported ${allJobsList.length} jobs to CSV.`);
+  }
+
+  if (btnExportCsv) btnExportCsv.addEventListener('click', exportJobsToCsv);
+  if (btnExportCsvSettings) btnExportCsvSettings.addEventListener('click', exportJobsToCsv);
 
   /**
    * Loads full status from extension background service worker.

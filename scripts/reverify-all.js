@@ -126,6 +126,10 @@ const requiredPopupIds = [
   'btn-connect-existing',
   'btn-sync-cache',
   'btn-disconnect',
+  'input-job-search',
+  'btn-clear-search',
+  'btn-export-csv',
+  'btn-export-csv-settings',
   'jt-status-bar-text'
 ];
 

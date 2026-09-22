@@ -68,6 +68,77 @@
   };
 
   /**
+   * Spawns a celebratory canvas particle burst.
+   */
+  function triggerParticleBurst(originX, originY) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '2147483647';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    const colors = ['#10B981', '#38BDF8', '#F59E0B', '#34D399', '#60A5FA'];
+    const particles = [];
+    const count = 28;
+
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+      const speed = 3.5 + Math.random() * 4.5;
+      particles.push({
+        x: originX,
+        y: originY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        size: 3 + Math.random() * 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1,
+        decay: 0.022 + Math.random() * 0.02
+      });
+    }
+
+    const startTime = performance.now();
+    function animate(now) {
+      const elapsed = now - startTime;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let alive = false;
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.14; // subtle gravity
+        p.alpha -= p.decay;
+        if (p.alpha > 0) {
+          alive = true;
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      if (alive && elapsed < 850) {
+        requestAnimationFrame(animate);
+      } else {
+        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
    * Initializes or gets the toast notification container.
    */
   function getOrCreateToastContainer() {
@@ -470,6 +541,11 @@
             const savedLink = jobData.jobLink;
             const rowIndex = response.rowIndex;
 
+            if (currentFloatingBtn) {
+              const rect = currentFloatingBtn.getBoundingClientRect();
+              triggerParticleBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }
+
             showToast({
               title: 'Job Saved to Google Sheet',
               message: `${jobData.role || 'Role'} • ${jobData.company || 'Company'}`,
@@ -590,6 +666,48 @@
     }
   });
 
+  /**
+   * Automatically detects LinkedIn "Easy Apply" successful submissions.
+   */
+  let lastSubmissionDetectedTime = 0;
+  function checkEasyApplySubmission() {
+    const now = Date.now();
+    if (now - lastSubmissionDetectedTime < 4000) return; // Debounce
+
+    const modal = document.querySelector('.artdeco-modal, .jobs-easy-apply-modal, [data-test-modal]');
+    if (!modal) return;
+
+    const text = (modal.innerText || modal.textContent || '').toLowerCase();
+    if (text.includes('application was sent') || text.includes('application submitted') || text.includes('your application has been submitted')) {
+      lastSubmissionDetectedTime = now;
+      const currentUrl = window.JobTrackerParser?.normalizeJobUrl(window.location.href);
+      if (!currentUrl) return;
+
+      chrome.runtime.sendMessage({ action: 'CHECK_JOB_STATUS', jobLink: currentUrl }, (res) => {
+        if (res && res.isSaved && res.status !== 'Applied' && res.status !== 'Interview' && res.status !== 'Offer' && res.status !== 'Accepted') {
+          chrome.runtime.sendMessage({
+            action: 'UPDATE_JOB_DETAILS',
+            jobLink: currentUrl,
+            status: 'Applied',
+            notes: res.savedJob?.notes || '',
+            rowIndex: res.savedJob?.rowIndex
+          }, (updateRes) => {
+            if (updateRes && updateRes.success) {
+              setButtonState('saved', 'Applied', res.savedJob?.notes, res.savedJob?.rowIndex);
+              showToast({
+                title: '🎉 Application Sent!',
+                message: 'Job status automatically updated to "Applied" in your Google Sheet.',
+                variant: 'success',
+                duration: 4500
+              });
+              syncSavedUrlsCache();
+            }
+          });
+        }
+      });
+    }
+  }
+
   // Observe SPA navigation and DOM changes on LinkedIn
   let debounceTimer = null;
   const observer = new MutationObserver(() => {
@@ -598,6 +716,7 @@
       requestAnimationFrame(() => {
         renderFloatingButton();
         renderSearchListBadges();
+        checkEasyApplySubmission();
       });
     }, 150);
   });

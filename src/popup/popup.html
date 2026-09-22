@@ -144,8 +144,28 @@
                 <button type="button" id="btn-clear-filter" aria-label="Clear filter">×</button>
               </span>
             </div>
-            <span id="activity-count-text" class="jt-text-muted-sm">0 saved</span>
+            <div class="jt-activity-header-actions">
+              <button type="button" id="btn-export-csv" class="jt-btn-mini" title="Export all tracked jobs to CSV">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>CSV</span>
+              </button>
+              <span id="activity-count-text" class="jt-text-muted-sm">0 saved</span>
+            </div>
           </div>
+
+          <!-- Instant Search Bar -->
+          <div class="jt-search-box">
+            <svg class="jt-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="input-job-search" class="jt-search-input" placeholder="Search by role, company, or note..." autocomplete="off">
+            <button type="button" id="btn-clear-search" class="jt-search-clear" style="display: none;" aria-label="Clear search">×</button>
+          </div>
+
           <div id="recent-jobs-list" class="jt-jobs-list">
             <div class="jt-empty-state">
               <p>No jobs tracked yet. Open any LinkedIn job posting to save it directly!</p>
@@ -206,7 +226,15 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
               </svg>
-              <span>Refresh Cache from Sheet</span>
+              <span>Refresh Cache</span>
+            </button>
+            <button type="button" id="btn-export-csv-settings" class="jt-btn jt-btn-ghost">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Export CSV</span>
             </button>
             <button type="button" id="btn-disconnect" class="jt-btn jt-btn-danger">
               <span>Disconnect</span>
