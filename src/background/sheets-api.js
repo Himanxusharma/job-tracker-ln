@@ -48,7 +48,19 @@ async function sheetsFetch(url, token, options = {}) {
   }
 
   if (!response.ok) {
-    const errorMsg = json?.error?.message || `Google Sheets API Error (${response.status}): ${text}`;
+    let errorMsg = json?.error?.message;
+    if (response.status === 401) {
+      errorMsg = 'Google authentication session expired. Please reconnect in extension settings.';
+    } else if (response.status === 403) {
+      errorMsg = 'Access denied. Make sure your Google account has editor permissions for this spreadsheet.';
+    } else if (response.status === 404) {
+      errorMsg = 'Google Sheet not found (404). It may have been deleted or moved. Please connect or create a sheet in settings.';
+    } else if (response.status === 429) {
+      errorMsg = 'Google Sheets rate limit exceeded. Please wait a few seconds and try again.';
+    } else if (!errorMsg) {
+      errorMsg = `Google Sheets API Error (${response.status}): ${text.slice(0, 100)}`;
+    }
+
     const error = new Error(errorMsg);
     error.status = response.status;
     error.details = json?.error;

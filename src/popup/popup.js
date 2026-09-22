@@ -393,6 +393,13 @@ document.addEventListener('DOMContentLoaded', () => {
       btnElement.disabled = false;
       btnElement.innerHTML = originalText;
 
+      if (chrome.runtime.lastError) {
+        const errorText = chrome.runtime.lastError.message || 'Could not connect to background service.';
+        setStatusMessage(errorText, true);
+        alert(errorText);
+        return;
+      }
+
       if (res && res.success) {
         setStatusMessage('Google Sheet created and formatted successfully!');
         refreshStatus();
@@ -427,6 +434,13 @@ document.addEventListener('DOMContentLoaded', () => {
         btnConnectExisting.disabled = false;
         btnConnectExisting.textContent = 'Link';
 
+        if (chrome.runtime.lastError) {
+          const errorText = chrome.runtime.lastError.message || 'Could not connect to background service.';
+          setStatusMessage(errorText, true);
+          alert(errorText);
+          return;
+        }
+
         if (res && res.success) {
           inputExistingSheet.value = '';
           setStatusMessage(`Connected! Found ${res.count || 0} existing jobs.`);
@@ -451,6 +465,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       chrome.runtime.sendMessage({ action: 'SYNC_SHEET' }, (res) => {
         btnSyncCache.disabled = false;
+        if (chrome.runtime.lastError) {
+          setStatusMessage(chrome.runtime.lastError.message || 'Sync failed.', true);
+          return;
+        }
         if (res && res.success) {
           setStatusMessage(`Cache refreshed! ${res.count || 0} jobs indexed.`);
           refreshStatus();
@@ -470,6 +488,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!confirmed) return;
 
       chrome.runtime.sendMessage({ action: 'DISCONNECT' }, () => {
+        if (chrome.runtime.lastError) {
+          setStatusMessage(chrome.runtime.lastError.message, true);
+          return;
+        }
         setStatusMessage('Disconnected Google Sheet.');
         refreshStatus();
         switchTab('home');

@@ -413,6 +413,7 @@
         chrome.runtime.sendMessage(
           { action: 'CHECK_JOB_STATUS', jobLink: currentUrl },
           (response) => {
+            if (chrome.runtime.lastError) return;
             if (response && response.isSaved) {
               setButtonState(
                 'saved',
@@ -426,7 +427,7 @@
           }
         );
       } catch (err) {
-        // Extension context invalidated / reloading
+        // Extension context invalidated / tab orphaned
       }
     }
   }
@@ -592,10 +593,13 @@
       );
     } catch (err) {
       setButtonState('idle');
+      const isContextInvalidated = err.message && err.message.toLowerCase().includes('context invalidated');
       showToast({
-        title: 'Error',
-        message: err.message || 'Unexpected error occurred.',
-        variant: 'danger'
+        title: isContextInvalidated ? 'Extension Reloaded' : 'Error',
+        message: isContextInvalidated
+          ? 'The extension was updated. Please refresh this tab to continue.'
+          : (err.message || 'Unexpected error occurred.'),
+        variant: isContextInvalidated ? 'warning' : 'danger'
       });
     }
   }
@@ -606,6 +610,7 @@
   function syncSavedUrlsCache() {
     try {
       chrome.runtime.sendMessage({ action: 'GET_SAVED_URLS' }, (res) => {
+        if (chrome.runtime.lastError) return;
         if (res && res.savedJobs) {
           cachedSavedUrls = res.savedJobs;
           renderSearchListBadges();
