@@ -32,3 +32,6 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Build and distribution archives
+*.zip
