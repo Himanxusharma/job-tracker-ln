@@ -154,7 +154,7 @@
   /**
    * Shows a modern floating toast notification.
    */
-  function showToast({ title, message, variant = 'success', canUndo = false, onUndo = null, onEdit = null, duration = 5000 }) {
+  function showToast({ title, message, variant = 'success', canUndo = false, onUndo = null, canAddNote = false, onAddNote = null, duration = 5000 }) {
     const container = getOrCreateToastContainer();
     const toast = document.createElement('div');
     toast.className = `jt-ln-toast jt-ln-toast-${variant}`;
@@ -163,6 +163,9 @@
     if (variant === 'warning') iconSvg = ICONS.alertCircle;
     if (variant === 'danger') iconSvg = ICONS.alertCircle;
 
+    const noteButtonHtml = (canAddNote && onAddNote)
+      ? `<button type="button" class="jt-ln-btn-note" aria-label="Add Note">${ICONS.edit}<span>Note</span></button>`
+      : '';
     const undoButtonHtml = canUndo ? `<button type="button" class="jt-ln-btn-undo">Undo</button>` : '';
 
     toast.innerHTML = `
@@ -173,6 +176,7 @@
           <div class="jt-ln-toast-desc">${message || ''}</div>
         </div>
         <div class="jt-ln-toast-actions">
+          ${noteButtonHtml}
           ${undoButtonHtml}
           <button type="button" class="jt-ln-btn-close" aria-label="Close">${ICONS.x}</button>
         </div>
@@ -183,9 +187,11 @@
     container.appendChild(toast);
 
     let dismissed = false;
+    let timerId = null;
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
+      if (timerId) clearTimeout(timerId);
       toast.classList.add('jt-ln-toast-out');
       setTimeout(() => {
         if (toast.parentNode) toast.parentNode.removeChild(toast);
@@ -194,6 +200,16 @@
 
     const closeBtn = toast.querySelector('.jt-ln-btn-close');
     if (closeBtn) closeBtn.addEventListener('click', dismiss);
+
+    if (canAddNote && onAddNote) {
+      const noteBtn = toast.querySelector('.jt-ln-btn-note');
+      if (noteBtn) {
+        noteBtn.addEventListener('click', () => {
+          dismiss();
+          onAddNote();
+        });
+      }
+    }
 
     if (canUndo && onUndo) {
       const undoBtn = toast.querySelector('.jt-ln-btn-undo');
@@ -208,7 +224,7 @@
     }
 
     if (duration > 0) {
-      setTimeout(dismiss, duration);
+      timerId = setTimeout(dismiss, duration);
     }
   }
 
@@ -224,11 +240,16 @@
 
   /**
    * Opens the Quick Notes & Inline Status editor popover.
+   * Supports both pre-save (saving for the first time with note) and post-save (updating existing row).
    */
   function openNotesPopover(jobLink, currentStatus = 'Saved', currentNotes = '', rowIndex = null, sourceBtn = null) {
     closePopover();
     const anchorBtn = sourceBtn || currentInlineBtn || currentFloatingBtn;
     if (!anchorBtn) return;
+
+    const isNewSave = !rowIndex;
+    const popoverTitle = isNewSave ? 'Save Job with Details' : 'Update Application Status';
+    const saveBtnLabel = isNewSave ? 'Save to Sheet' : 'Save Changes';
 
     const popover = document.createElement('div');
     popover.id = 'jt-ln-popover';
@@ -249,7 +270,7 @@
 
     popover.innerHTML = `
       <div class="jt-ln-popover-header">
-        <span class="jt-ln-popover-title">Update Application Status</span>
+        <span class="jt-ln-popover-title">${popoverTitle}</span>
         <button type="button" class="jt-ln-popover-close" aria-label="Close">${ICONS.x}</button>
       </div>
       <div class="jt-ln-popover-group">
@@ -259,22 +280,35 @@
         </select>
       </div>
       <div class="jt-ln-popover-group">
-        <label class="jt-ln-popover-label">Notes (Referral, salary, contact, etc.)</label>
+        <label class="jt-ln-popover-label">Notes (Referral, salary, contact, interview details...)</label>
         <textarea class="jt-ln-popover-textarea" id="jt-popover-notes" placeholder="e.g. Referred by Sarah, round 1 next week...">${currentNotes || ''}</textarea>
       </div>
       <div class="jt-ln-popover-actions">
         <button type="button" class="jt-ln-popover-btn-cancel">Cancel</button>
-        <button type="button" class="jt-ln-popover-btn-save">Save Changes</button>
+        <button type="button" class="jt-ln-popover-btn-save">${saveBtnLabel}</button>
       </div>
     `;
 
     document.body.appendChild(popover);
     currentPopover = popover;
 
+    const textarea = popover.querySelector('#jt-popover-notes');
+    setTimeout(() => {
+      if (textarea) textarea.focus();
+    }, 60);
+
+    const saveBtn = popover.querySelector('.jt-ln-popover-btn-save');
+
+    // Shortcut Cmd/Ctrl + Enter to save quickly
+    textarea?.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        saveBtn.click();
+      }
+    });
+
     popover.querySelector('.jt-ln-popover-close').addEventListener('click', closePopover);
     popover.querySelector('.jt-ln-popover-btn-cancel').addEventListener('click', closePopover);
 
-    const saveBtn = popover.querySelector('.jt-ln-popover-btn-save');
     saveBtn.addEventListener('click', () => {
       const newStatus = popover.querySelector('#jt-popover-status').value;
       const newNotes = popover.querySelector('#jt-popover-notes').value.trim();
@@ -282,31 +316,90 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
 
-      chrome.runtime.sendMessage({
-        action: 'UPDATE_JOB_DETAILS',
-        jobLink,
-        status: newStatus,
-        notes: newNotes,
-        rowIndex
-      }, (res) => {
-        closePopover();
-        if (res && res.success) {
-          setButtonState('saved', newStatus, newNotes, rowIndex);
-          showToast({
-            title: 'Job Updated',
-            message: `Status marked as "${newStatus}". Synced to Google Sheet.`,
-            variant: 'success',
-            duration: 3500
-          });
-          syncSavedUrlsCache();
-        } else {
-          showToast({
-            title: 'Update Failed',
-            message: res?.error || 'Could not update Google Sheet row.',
-            variant: 'danger'
-          });
-        }
-      });
+      if (isNewSave) {
+        // Pre-save flow: Save job directly with custom status & notes
+        const jobData = window.JobTrackerParser.parseCurrentJob();
+        jobData.status = newStatus;
+        jobData.notes = newNotes;
+
+        setButtonState('loading');
+        chrome.runtime.sendMessage({ action: 'SAVE_JOB', jobData }, (response) => {
+          closePopover();
+          if (response && response.success) {
+            setButtonState('saved', newStatus, newNotes, response.rowIndex);
+            const savedLink = jobData.jobLink;
+            const newRowIndex = response.rowIndex;
+
+            const anchor = currentInlineBtn || currentFloatingBtn;
+            if (anchor) {
+              const r = anchor.getBoundingClientRect();
+              triggerParticleBurst(r.left + r.width / 2, r.top + r.height / 2);
+            }
+
+            showToast({
+              title: 'Job Saved to Google Sheet',
+              message: `${jobData.role || 'Job'} • ${jobData.company || 'Company'} (${newStatus})`,
+              variant: 'success',
+              canUndo: true,
+              canAddNote: true,
+              onAddNote: () => {
+                openNotesPopover(savedLink, newStatus, newNotes, newRowIndex, anchor);
+              },
+              duration: 5000,
+              onUndo: async () => {
+                chrome.runtime.sendMessage({ action: 'UNDO_SAVE', jobLink: savedLink, rowIndex: newRowIndex }, (undoRes) => {
+                  if (undoRes && undoRes.success) {
+                    setButtonState('idle');
+                    showToast({
+                      title: 'Save Undone',
+                      message: 'Removed from Google Sheet and tracker cache.',
+                      variant: 'warning',
+                      duration: 3000
+                    });
+                    syncSavedUrlsCache();
+                  }
+                });
+              }
+            });
+
+            syncSavedUrlsCache();
+          } else {
+            setButtonState('idle');
+            showToast({
+              title: 'Save Failed',
+              message: response?.error || 'Could not save to Google Sheet.',
+              variant: 'danger'
+            });
+          }
+        });
+      } else {
+        // Post-save flow: Update existing Google Sheet row
+        chrome.runtime.sendMessage({
+          action: 'UPDATE_JOB_DETAILS',
+          jobLink,
+          status: newStatus,
+          notes: newNotes,
+          rowIndex
+        }, (res) => {
+          closePopover();
+          if (res && res.success) {
+            setButtonState('saved', newStatus, newNotes, rowIndex);
+            showToast({
+              title: 'Job Updated',
+              message: `Status marked as "${newStatus}". Synced to Google Sheet.`,
+              variant: 'success',
+              duration: 3500
+            });
+            syncSavedUrlsCache();
+          } else {
+            showToast({
+              title: 'Update Failed',
+              message: res?.error || 'Could not update Google Sheet row.',
+              variant: 'danger'
+            });
+          }
+        });
+      }
     });
   }
 
@@ -474,6 +567,10 @@
       currentInlineBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
+        // If clicking note icon, let note icon handler handle it
+        if (e.target.closest('.jt-ln-btn-pre-note, .jt-ln-btn-edit-note')) return;
+        e.stopPropagation();
+        e.preventDefault();
         handleSaveClick();
       });
     }
@@ -569,7 +666,7 @@
         btn.classList.add('jt-ln-btn-saved');
         btn.innerHTML = `
           ${dragHandle}
-          ${ICONS.check}<span>Saved (${statusText || 'In Sheet'})</span>
+          <span class="jt-ln-btn-main-action">${ICONS.check}<span>Saved (${statusText || 'In Sheet'})</span></span>
           <span class="jt-ln-btn-edit-note" title="Update status or add note">${ICONS.edit}</span>
         `;
 
@@ -577,12 +674,27 @@
         if (editBtn) {
           editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
             openNotesPopover(currentUrl, statusText, notes, rowIndex, btn);
           });
         }
       } else {
-        btn.innerHTML = `${dragHandle}${ICONS.bookmark}<span>Save Job</span>`;
+        btn.innerHTML = `
+          ${dragHandle}
+          <span class="jt-ln-btn-main-action">${ICONS.bookmark}<span>Save Job</span></span>
+          <span class="jt-ln-btn-pre-note" title="Save with custom note & status">${ICONS.edit}</span>
+        `;
+
+        const preNoteBtn = btn.querySelector('.jt-ln-btn-pre-note');
+        if (preNoteBtn) {
+          preNoteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
+            openNotesPopover(currentUrl, 'Saved', '', null, btn);
+          });
+        }
       }
     });
   }
@@ -672,6 +784,10 @@
               message: `${jobData.role || 'Role'} • ${jobData.company || 'Company'}`,
               variant: 'success',
               canUndo: true,
+              canAddNote: true,
+              onAddNote: () => {
+                openNotesPopover(savedLink, 'Saved', '', rowIndex, anchorBtn);
+              },
               duration: 5000,
               onUndo: async () => {
                 chrome.runtime.sendMessage(

@@ -122,17 +122,46 @@
   flex-shrink: 0 !important;
 }
 
-#jt-ln-inline-btn .jt-ln-btn-edit-note {
+.jt-ln-btn-main-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.jt-ln-btn-pre-note {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  margin-left: 4px !important;
-  padding: 2px !important;
-  border-radius: 4px !important;
+  margin-left: 6px !important;
+  padding: 4px 6px !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.22) !important;
   cursor: pointer !important;
+  opacity: 0.8 !important;
+  transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease !important;
+  border-radius: 0 4px 4px 0 !important;
 }
 
-#jt-ln-inline-btn .jt-ln-btn-edit-note:hover {
+.jt-ln-btn-pre-note:hover {
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #38BDF8 !important;
+}
+
+.jt-ln-btn-edit-note {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: 6px !important;
+  padding: 4px 6px !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.22) !important;
+  cursor: pointer !important;
+  opacity: 0.85 !important;
+  transition: opacity 150ms ease, background-color 150ms ease !important;
+  border-radius: 0 4px 4px 0 !important;
+}
+
+.jt-ln-btn-edit-note:hover {
+  opacity: 1 !important;
   background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
@@ -230,6 +259,34 @@
   gap: 8px !important;
   margin-left: 8px !important;
   flex-shrink: 0 !important;
+}
+
+.jt-ln-btn-note {
+  background-color: rgba(56, 189, 248, 0.12) !important;
+  color: #38BDF8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 5px 9px !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  transition: all 150ms ease !important;
+}
+
+.jt-ln-btn-note:hover {
+  background-color: #0284C7 !important;
+  color: #FFFFFF !important;
+  border-color: #38BDF8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
+}
+
+.jt-ln-btn-note svg {
+  width: 12px !important;
+  height: 12px !important;
 }
 
 .jt-ln-btn-undo {
