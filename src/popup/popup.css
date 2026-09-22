@@ -94,6 +94,43 @@ body::-webkit-scrollbar-thumb:hover {
   font-weight: 500;
 }
 
+/* Header Actions */
+.jt-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jt-btn-icon-sync {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--jt-bg-card);
+  border: 1px solid var(--jt-border-subtle);
+  color: var(--jt-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.jt-btn-icon-sync:hover {
+  background: var(--jt-bg-elevated);
+  color: var(--jt-accent-sky);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+.jt-btn-icon-sync svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+}
+
 /* Status Pill */
 .jt-status-pill {
   display: inline-flex;
@@ -324,6 +361,58 @@ body::-webkit-scrollbar-thumb:hover {
 .jt-sheet-link svg {
   width: 12px;
   height: 12px;
+}
+
+.jt-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jt-btn-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--jt-radius-full);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--jt-accent-sky);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.jt-btn-sync-pill:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: var(--jt-accent-sky);
+  color: #FFFFFF;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.25);
+}
+
+.jt-btn-sync-pill svg {
+  width: 12px;
+  height: 12px;
+}
+
+.jt-sheet-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.jt-bullet-sep {
+  color: var(--jt-text-muted);
+  font-size: 10px;
+}
+
+.jt-sync-time {
+  font-size: 11px;
+  color: var(--jt-text-muted);
 }
 
 /* Pipeline Funnel */
@@ -873,3 +962,19 @@ body::-webkit-scrollbar-thumb:hover {
   align-items: center;
   justify-content: space-between;
 }
+
+/* Syncing Animation State */
+@keyframes jt-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.is-syncing svg {
+  animation: jt-spin 0.8s linear infinite !important;
+}
+
+.is-syncing {
+  opacity: 0.75 !important;
+  cursor: wait !important;
+}
+

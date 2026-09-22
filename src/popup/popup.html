@@ -23,9 +23,16 @@
           <span class="jt-version-tag">v1.0 • LinkedIn Edition</span>
         </div>
       </div>
-      <div id="jt-connection-pill" class="jt-status-pill jt-pill-disconnected">
-        <span class="jt-status-dot"></span>
-        <span class="jt-status-text">Not Connected</span>
+      <div class="jt-header-actions">
+        <button type="button" id="btn-sync-header" class="jt-btn-icon-sync" title="Sync with Google Sheet (pull edits and deleted rows)" aria-label="Sync with Google Sheet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </button>
+        <div id="jt-connection-pill" class="jt-status-pill jt-pill-disconnected">
+          <span class="jt-status-dot"></span>
+          <span class="jt-status-text">Not Connected</span>
+        </div>
       </div>
     </header>
 
@@ -55,7 +62,15 @@
         <div id="card-connected-sheet" class="jt-card jt-card-sheet" style="display: none;">
           <div class="jt-card-header">
             <span class="jt-card-label">Active Destination</span>
-            <span class="jt-badge-green">Sync Active</span>
+            <div class="jt-card-header-actions">
+              <span class="jt-badge-green">Sync Active</span>
+              <button type="button" id="btn-sync-card" class="jt-btn-sync-pill" title="Sync now with Google Sheet (updates modifications & deletions)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                <span>Sync Now</span>
+              </button>
+            </div>
           </div>
           <div class="jt-sheet-row">
             <div class="jt-sheet-icon">
@@ -69,14 +84,18 @@
             </div>
             <div class="jt-sheet-details">
               <div id="sheet-title-text" class="jt-sheet-name">Job Tracker LN</div>
-              <a id="sheet-external-link" href="#" target="_blank" rel="noopener noreferrer" class="jt-sheet-link">
-                <span>Open in Google Sheets</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15 3 21 3 21 9"/>
-                  <line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-              </a>
+              <div class="jt-sheet-meta-row">
+                <a id="sheet-external-link" href="#" target="_blank" rel="noopener noreferrer" class="jt-sheet-link">
+                  <span>Open in Google Sheets</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+                <span class="jt-bullet-sep">•</span>
+                <span id="sheet-last-sync-time" class="jt-sync-time">Last synced: Just now</span>
+              </div>
             </div>
           </div>
         </div>
@@ -145,6 +164,12 @@
               </span>
             </div>
             <div class="jt-activity-header-actions">
+              <button type="button" id="btn-sync-activity" class="jt-btn-mini" title="Sync now with Sheet to pull changes or deleted jobs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                <span>Sync</span>
+              </button>
               <button type="button" id="btn-export-csv" class="jt-btn-mini" title="Export all tracked jobs to CSV">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -226,7 +251,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
               </svg>
-              <span>Refresh Cache</span>
+              <span>Sync with Google Sheet</span>
             </button>
             <button type="button" id="btn-export-csv-settings" class="jt-btn jt-btn-ghost">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

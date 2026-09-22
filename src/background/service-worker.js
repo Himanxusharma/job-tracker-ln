@@ -226,7 +226,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (action === 'SYNC_SHEET') {
         const { sheetId } = await getSettings();
         if (!sheetId) {
-          return sendResponse({ success: false, error: 'No sheet connected.' });
+          return sendResponse({ success: false, error: 'No sheet connected. Connect a Google Sheet first.' });
         }
 
         const token = await getAuthToken(true);
@@ -234,9 +234,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const existingJobs = await fetchAllSheetJobs(token, sheetId);
         await replaceSavedJobsCache(existingJobs);
 
+        // Broadcast to open LinkedIn tabs so inline buttons & badges reflect changes immediately
+        try {
+          chrome.tabs.query({ url: '*://*.linkedin.com/*' }, (tabs) => {
+            if (tabs && tabs.length > 0) {
+              tabs.forEach(tab => {
+                chrome.tabs.sendMessage(tab.id, {
+                  action: 'SYNC_COMPLETE',
+                  count: Object.keys(existingJobs).length
+                }).catch(() => {});
+              });
+            }
+          });
+        } catch (tabErr) {
+          // Tab messaging non-fatal
+        }
+
         return sendResponse({
           success: true,
-          count: Object.keys(existingJobs).length
+          count: Object.keys(existingJobs).length,
+          lastSync: new Date().toISOString()
         });
       }
 
@@ -244,11 +261,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (action === 'GET_STATUS') {
         const settings = await getSettings();
         const cache = await getSavedJobsCache();
-        const count = Object.keys(cache).length;
+        const allJobs = Object.values(cache).reverse();
         return sendResponse({
           settings,
-          savedCount: count,
-          recentJobs: Object.values(cache).slice(-5).reverse()
+          savedCount: allJobs.length,
+          recentJobs: allJobs
         });
       }
 

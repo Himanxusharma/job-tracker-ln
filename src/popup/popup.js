@@ -46,6 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputExistingSheet = document.getElementById('input-existing-sheet');
   const btnConnectExisting = document.getElementById('btn-connect-existing');
   const btnSyncCache = document.getElementById('btn-sync-cache');
+  const btnSyncHeader = document.getElementById('btn-sync-header');
+  const btnSyncCard = document.getElementById('btn-sync-card');
+  const btnSyncActivity = document.getElementById('btn-sync-activity');
+  const sheetLastSyncTime = document.getElementById('sheet-last-sync-time');
   const btnDisconnect = document.getElementById('btn-disconnect');
 
   let allJobsList = [];
@@ -358,6 +362,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sheetTitleText.textContent = settings.sheetTitle || 'Job Tracker LN';
         sheetExternalLink.href = settings.sheetUrl || `https://docs.google.com/spreadsheets/d/${settings.sheetId}/edit`;
+
+        if (sheetLastSyncTime) {
+          if (settings.lastSync) {
+            sheetLastSyncTime.textContent = `Last synced: ${formatRelativeTime(settings.lastSync) || 'Just now'}`;
+          } else {
+            sheetLastSyncTime.textContent = 'Ready to sync';
+          }
+        }
       } else {
         connectionPill.className = 'jt-status-pill jt-pill-disconnected';
         connectionPill.innerHTML = '<span class="jt-status-dot"></span><span>Not Connected</span>';
@@ -456,28 +468,54 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Refreshes local dedup cache from connected sheet.
+   * Refreshes local dedup cache and data from connected Google Sheet.
+   * Handles modifications, new statuses, and purged/deleted rows.
    */
-  if (btnSyncCache) {
-    btnSyncCache.addEventListener('click', () => {
-      btnSyncCache.disabled = true;
-      setStatusMessage('Syncing local cache from Google Sheet...');
+  let isSyncing = false;
+  function triggerSync() {
+    if (isSyncing) return;
+    isSyncing = true;
 
-      chrome.runtime.sendMessage({ action: 'SYNC_SHEET' }, (res) => {
-        btnSyncCache.disabled = false;
-        if (chrome.runtime.lastError) {
-          setStatusMessage(chrome.runtime.lastError.message || 'Sync failed.', true);
-          return;
-        }
-        if (res && res.success) {
-          setStatusMessage(`Cache refreshed! ${res.count || 0} jobs indexed.`);
-          refreshStatus();
-        } else {
-          setStatusMessage(res?.error || 'Sync failed.', true);
-        }
+    const allSyncButtons = [
+      btnSyncHeader,
+      btnSyncCard,
+      btnSyncActivity,
+      btnSyncCache
+    ].filter(Boolean);
+
+    allSyncButtons.forEach(btn => {
+      btn.classList.add('is-syncing');
+      btn.disabled = true;
+    });
+
+    setStatusMessage('Syncing with Google Sheet (updating changes & deletions)...');
+
+    chrome.runtime.sendMessage({ action: 'SYNC_SHEET' }, (res) => {
+      isSyncing = false;
+      allSyncButtons.forEach(btn => {
+        btn.classList.remove('is-syncing');
+        btn.disabled = false;
       });
+
+      if (chrome.runtime.lastError) {
+        setStatusMessage(chrome.runtime.lastError.message || 'Sync failed.', true);
+        return;
+      }
+
+      if (res && res.success) {
+        const count = res.count || 0;
+        setStatusMessage(`✓ Synced with Sheet! ${count} active job${count === 1 ? '' : 's'} indexed.`);
+        refreshStatus();
+      } else {
+        setStatusMessage(res?.error || 'Sync failed. Check your Sheet connection.', true);
+      }
     });
   }
+
+  if (btnSyncHeader) btnSyncHeader.addEventListener('click', triggerSync);
+  if (btnSyncCard) btnSyncCard.addEventListener('click', triggerSync);
+  if (btnSyncActivity) btnSyncActivity.addEventListener('click', triggerSync);
+  if (btnSyncCache) btnSyncCache.addEventListener('click', triggerSync);
 
   /**
    * Disconnects active sheet and clears session.

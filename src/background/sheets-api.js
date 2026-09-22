@@ -4,6 +4,8 @@
  * row appending, row deletion (undo), and dedup cache synchronization.
  */
 
+import { normalizeJobUrl } from '../utils/url-normalizer.js';
+
 const STATUS_OPTIONS = [
   'Saved',
   'Applied',
@@ -682,7 +684,8 @@ export async function fetchAllSheetJobs(token, sheetId) {
     const rowIndex = idx + 2;
 
     if (jobLink) {
-      jobMap[jobLink] = {
+      const canonicalKey = normalizeJobUrl(jobLink) || jobLink;
+      jobMap[canonicalKey] = {
         dateSaved,
         role,
         company,
@@ -690,7 +693,8 @@ export async function fetchAllSheetJobs(token, sheetId) {
         location,
         status,
         notes,
-        rowIndex
+        rowIndex,
+        jobLink: canonicalKey
       };
     }
   });

@@ -655,15 +655,16 @@
 
   /**
    * Checks if current active job is already saved in sheet/cache.
+   * @param {boolean} [force=false] Force check even if URL has not changed (e.g. on manual sheet sync)
    */
-  function checkCurrentJobStatus() {
+  function checkCurrentJobStatus(force = false) {
     const isDetail = window.JobTrackerParser?.isJobDetailView();
     if (!isDetail) return;
 
     const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
     if (!currentUrl) return;
 
-    if (currentUrl !== lastCheckedUrl) {
+    if (force || currentUrl !== lastCheckedUrl) {
       lastCheckedUrl = currentUrl;
       try {
         chrome.runtime.sendMessage(
@@ -967,10 +968,14 @@
     }
   });
 
-  // Background Command Listener (from chrome.commands)
+  // Background Command and Sync Listener
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action === 'TRIGGER_SAVE_SHORTCUT') {
       handleSaveClick();
+    }
+    if (message.action === 'SYNC_COMPLETE') {
+      checkCurrentJobStatus(true);
+      updateSearchListBadges();
     }
   });
 
