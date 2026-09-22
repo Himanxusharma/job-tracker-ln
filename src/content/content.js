@@ -378,23 +378,41 @@
    * Locates the action buttons row inside the job details card.
    */
   function getJobActionBar() {
+    // 1. Direct match on LinkedIn's Save button (in details view or top-card)
+    const saveBtn = document.querySelector(
+      '.jobs-save-button, button[aria-label*="Save"], button[class*="save-button"], [data-control-name="save_job"]'
+    );
+    if (saveBtn && saveBtn.parentElement) {
+      return { container: saveBtn.parentElement, target: saveBtn, method: 'after' };
+    }
+
+    // 2. Direct match on LinkedIn's Apply button
+    const applyBtn = document.querySelector(
+      '.jobs-apply-button, button[aria-label*="Apply"], .jobs-s-apply, [data-control-name="jobdetails_topcard_apply"]'
+    );
+    if (applyBtn && applyBtn.parentElement) {
+      return { container: applyBtn.parentElement, target: applyBtn, method: 'after' };
+    }
+
+    // 3. Fallback container selectors
     const selectors = [
       '.job-details-jobs-unified-top-card__action-buttons',
       '.jobs-unified-top-card__content--two-pane .jobs-box__html-content',
       '.jobs-details__main-content .jobs-apply-button',
       '.jobs-s-apply',
-      '.jobs-save-button',
-      '.jobs-apply-button',
-      '.top-card-layout__entity-actions'
+      '.top-card-layout__entity-actions',
+      '.jobs-unified-top-card__content--two-pane',
+      '[class*="action-buttons"]'
     ];
 
     for (const sel of selectors) {
       const el = document.querySelector(sel);
       if (el) {
-        if (el.tagName === 'BUTTON' || el.classList.contains('jobs-save-button') || el.classList.contains('jobs-apply-button')) {
-          return el.parentElement;
-        }
-        return el;
+        return {
+          container: el.tagName === 'BUTTON' ? el.parentElement : el,
+          target: null,
+          method: 'append'
+        };
       }
     }
     return null;
@@ -405,17 +423,17 @@
    */
   function renderInlineButton() {
     const isDetail = window.JobTrackerParser?.isJobDetailView();
-    const container = getJobActionBar();
+    const actionInfo = getJobActionBar();
 
-    if (!isDetail || !container) {
+    if (!isDetail || !actionInfo || !actionInfo.container) {
       if (currentInlineBtn && currentInlineBtn.parentNode) {
         currentInlineBtn.parentNode.removeChild(currentInlineBtn);
         currentInlineBtn = null;
       }
-      return;
+      return false;
     }
 
-    if (!currentInlineBtn || !container.contains(currentInlineBtn)) {
+    if (!currentInlineBtn || !document.body.contains(currentInlineBtn)) {
       if (currentInlineBtn && currentInlineBtn.parentNode) {
         currentInlineBtn.parentNode.removeChild(currentInlineBtn);
       }
@@ -431,12 +449,17 @@
         handleSaveClick();
       });
 
-      container.appendChild(currentInlineBtn);
+      if (actionInfo.target && actionInfo.method === 'after') {
+        actionInfo.target.insertAdjacentElement('afterend', currentInlineBtn);
+      } else {
+        actionInfo.container.appendChild(currentInlineBtn);
+      }
     }
+    return true;
   }
 
   /**
-   * Injects or updates the floating "Save Job" button.
+   * Injects or updates the floating "Save Job" button (fallback).
    */
   async function renderFloatingButton() {
     const isDetail = window.JobTrackerParser?.isJobDetailView();
@@ -450,8 +473,6 @@
       return;
     }
 
-    const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
-
     if (!currentFloatingBtn || !document.body.contains(currentFloatingBtn)) {
       currentFloatingBtn = document.createElement('button');
       currentFloatingBtn.id = 'jt-ln-floating-btn';
@@ -462,7 +483,6 @@
       `;
 
       currentFloatingBtn.addEventListener('click', (e) => {
-        // Prevent click trigger if button was dragged
         if (hasMoved) {
           hasMoved = false;
           return;
@@ -473,9 +493,19 @@
       setupDraggable(currentFloatingBtn);
       document.body.appendChild(currentFloatingBtn);
     }
+  }
 
-    // Check if the current job is already saved
-    if (currentUrl && currentUrl !== lastCheckedUrl) {
+  /**
+   * Checks if current active job is already saved in sheet/cache.
+   */
+  function checkCurrentJobStatus() {
+    const isDetail = window.JobTrackerParser?.isJobDetailView();
+    if (!isDetail) return;
+
+    const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
+    if (!currentUrl) return;
+
+    if (currentUrl !== lastCheckedUrl) {
       lastCheckedUrl = currentUrl;
       try {
         chrome.runtime.sendMessage(
@@ -501,11 +531,39 @@
   }
 
   /**
-   * Renders both inline and floating buttons.
+   * Main button renderer: moves the button directly into the job card header next to Save/Apply!
+   * Removes bottom-right floating button when inline button is active.
    */
   function renderAllButtons() {
-    renderFloatingButton();
-    renderInlineButton();
+    const isDetail = window.JobTrackerParser?.isJobDetailView();
+    if (!isDetail) {
+      if (currentFloatingBtn && currentFloatingBtn.parentNode) {
+        currentFloatingBtn.parentNode.removeChild(currentFloatingBtn);
+        currentFloatingBtn = null;
+      }
+      if (currentInlineBtn && currentInlineBtn.parentNode) {
+        currentInlineBtn.parentNode.removeChild(currentInlineBtn);
+        currentInlineBtn = null;
+      }
+      closePopover();
+      return;
+    }
+
+    const inlineActive = renderInlineButton();
+
+    if (inlineActive) {
+      // The button has been successfully moved to the job card!
+      // Remove bottom-right floating button so it's clean and uncluttered.
+      if (currentFloatingBtn && currentFloatingBtn.parentNode) {
+        currentFloatingBtn.parentNode.removeChild(currentFloatingBtn);
+        currentFloatingBtn = null;
+      }
+    } else {
+      // Fallback only if no job action buttons could be found on the page
+      renderFloatingButton();
+    }
+
+    checkCurrentJobStatus();
   }
 
   /**
