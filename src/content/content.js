@@ -8,6 +8,7 @@
   'use strict';
 
   let currentFloatingBtn = null;
+  let currentInlineBtn = null;
   let currentPopover = null;
   let toastContainer = null;
   let lastCheckedUrl = '';
@@ -224,17 +225,23 @@
   /**
    * Opens the Quick Notes & Inline Status editor popover.
    */
-  function openNotesPopover(jobLink, currentStatus = 'Saved', currentNotes = '', rowIndex = null) {
+  function openNotesPopover(jobLink, currentStatus = 'Saved', currentNotes = '', rowIndex = null, sourceBtn = null) {
     closePopover();
-    if (!currentFloatingBtn) return;
+    const anchorBtn = sourceBtn || currentInlineBtn || currentFloatingBtn;
+    if (!anchorBtn) return;
 
     const popover = document.createElement('div');
     popover.id = 'jt-ln-popover';
 
-    const rect = currentFloatingBtn.getBoundingClientRect();
-    const bottomOffset = window.innerHeight - rect.top + 8;
-    popover.style.bottom = `${bottomOffset}px`;
-    popover.style.right = '24px';
+    const rect = anchorBtn.getBoundingClientRect();
+    if (anchorBtn === currentInlineBtn) {
+      popover.style.top = `${window.scrollY + rect.bottom + 8}px`;
+      popover.style.left = `${window.scrollX + Math.max(16, rect.left)}px`;
+    } else {
+      const bottomOffset = window.innerHeight - rect.top + 8;
+      popover.style.bottom = `${bottomOffset}px`;
+      popover.style.right = '24px';
+    }
 
     const optionsHtml = STATUS_OPTIONS.map(opt => `
       <option value="${opt}" ${opt === currentStatus ? 'selected' : ''}>${opt}</option>
@@ -368,6 +375,67 @@
   }
 
   /**
+   * Locates the action buttons row inside the job details card.
+   */
+  function getJobActionBar() {
+    const selectors = [
+      '.job-details-jobs-unified-top-card__action-buttons',
+      '.jobs-unified-top-card__content--two-pane .jobs-box__html-content',
+      '.jobs-details__main-content .jobs-apply-button',
+      '.jobs-s-apply',
+      '.jobs-save-button',
+      '.jobs-apply-button',
+      '.top-card-layout__entity-actions'
+    ];
+
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        if (el.tagName === 'BUTTON' || el.classList.contains('jobs-save-button') || el.classList.contains('jobs-apply-button')) {
+          return el.parentElement;
+        }
+        return el;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Injects or updates the inline "Save Job" button next to Apply/Save.
+   */
+  function renderInlineButton() {
+    const isDetail = window.JobTrackerParser?.isJobDetailView();
+    const container = getJobActionBar();
+
+    if (!isDetail || !container) {
+      if (currentInlineBtn && currentInlineBtn.parentNode) {
+        currentInlineBtn.parentNode.removeChild(currentInlineBtn);
+        currentInlineBtn = null;
+      }
+      return;
+    }
+
+    if (!currentInlineBtn || !container.contains(currentInlineBtn)) {
+      if (currentInlineBtn && currentInlineBtn.parentNode) {
+        currentInlineBtn.parentNode.removeChild(currentInlineBtn);
+      }
+
+      currentInlineBtn = document.createElement('button');
+      currentInlineBtn.id = 'jt-ln-inline-btn';
+      currentInlineBtn.type = 'button';
+      currentInlineBtn.innerHTML = `${ICONS.bookmark}<span>Save Job</span>`;
+
+      currentInlineBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        handleSaveClick();
+      });
+
+      container.appendChild(currentInlineBtn);
+    }
+  }
+
+  /**
    * Injects or updates the floating "Save Job" button.
    */
   async function renderFloatingButton() {
@@ -433,41 +501,48 @@
   }
 
   /**
-   * Updates button visual state.
+   * Renders both inline and floating buttons.
+   */
+  function renderAllButtons() {
+    renderFloatingButton();
+    renderInlineButton();
+  }
+
+  /**
+   * Updates button visual state across both floating and inline buttons.
    */
   function setButtonState(state, statusText = '', notes = '', rowIndex = null) {
-    if (!currentFloatingBtn) return;
+    const buttons = [currentFloatingBtn, currentInlineBtn].filter(Boolean);
+    if (buttons.length === 0) return;
 
-    currentFloatingBtn.classList.remove('jt-ln-btn-loading', 'jt-ln-btn-saved');
+    buttons.forEach(btn => {
+      btn.classList.remove('jt-ln-btn-loading', 'jt-ln-btn-saved');
+      const isFloating = btn.id === 'jt-ln-floating-btn';
+      const dragHandle = isFloating ? `<span class="jt-ln-drag-handle" title="Drag to reposition">${ICONS.dragHandle}</span>` : '';
 
-    if (state === 'loading') {
-      currentFloatingBtn.classList.add('jt-ln-btn-loading');
-      currentFloatingBtn.innerHTML = `
-        <span class="jt-ln-drag-handle">${ICONS.dragHandle}</span>
-        ${ICONS.spinner}<span>Saving...</span>
-      `;
-    } else if (state === 'saved') {
-      currentFloatingBtn.classList.add('jt-ln-btn-saved');
-      currentFloatingBtn.innerHTML = `
-        <span class="jt-ln-drag-handle" title="Drag to reposition">${ICONS.dragHandle}</span>
-        ${ICONS.check}<span>Saved (${statusText || 'In Sheet'})</span>
-        <span class="jt-ln-btn-edit-note" title="Update status or add note">${ICONS.edit}</span>
-      `;
+      if (state === 'loading') {
+        btn.classList.add('jt-ln-btn-loading');
+        btn.innerHTML = `${dragHandle}${ICONS.spinner}<span>Saving...</span>`;
+      } else if (state === 'saved') {
+        btn.classList.add('jt-ln-btn-saved');
+        btn.innerHTML = `
+          ${dragHandle}
+          ${ICONS.check}<span>Saved (${statusText || 'In Sheet'})</span>
+          <span class="jt-ln-btn-edit-note" title="Update status or add note">${ICONS.edit}</span>
+        `;
 
-      const editBtn = currentFloatingBtn.querySelector('.jt-ln-btn-edit-note');
-      if (editBtn) {
-        editBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
-          openNotesPopover(currentUrl, statusText, notes, rowIndex);
-        });
+        const editBtn = btn.querySelector('.jt-ln-btn-edit-note');
+        if (editBtn) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
+            openNotesPopover(currentUrl, statusText, notes, rowIndex, btn);
+          });
+        }
+      } else {
+        btn.innerHTML = `${dragHandle}${ICONS.bookmark}<span>Save Job</span>`;
       }
-    } else {
-      currentFloatingBtn.innerHTML = `
-        <span class="jt-ln-drag-handle" title="Drag to reposition">${ICONS.dragHandle}</span>
-        ${ICONS.bookmark}<span>Save Job</span>
-      `;
-    }
+    });
   }
 
   /**
@@ -477,11 +552,13 @@
     if (!window.JobTrackerParser) return;
 
     // If already saved, clicking opens status/notes editor
-    if (currentFloatingBtn && currentFloatingBtn.classList.contains('jt-ln-btn-saved')) {
+    const isSavedAlready = (currentFloatingBtn && currentFloatingBtn.classList.contains('jt-ln-btn-saved')) ||
+                           (currentInlineBtn && currentInlineBtn.classList.contains('jt-ln-btn-saved'));
+    if (isSavedAlready) {
       const currentUrl = window.JobTrackerParser.normalizeJobUrl(window.location.href);
       chrome.runtime.sendMessage({ action: 'CHECK_JOB_STATUS', jobLink: currentUrl }, (res) => {
         if (res && res.savedJob) {
-          openNotesPopover(currentUrl, res.status || 'Saved', res.savedJob.notes || '', res.savedJob.rowIndex);
+          openNotesPopover(currentUrl, res.status || 'Saved', res.savedJob.notes || '', res.savedJob.rowIndex, currentInlineBtn || currentFloatingBtn);
         }
       });
       return;
@@ -542,8 +619,9 @@
             const savedLink = jobData.jobLink;
             const rowIndex = response.rowIndex;
 
-            if (currentFloatingBtn) {
-              const rect = currentFloatingBtn.getBoundingClientRect();
+            const anchorBtn = currentInlineBtn || currentFloatingBtn;
+            if (anchorBtn) {
+              const rect = anchorBtn.getBoundingClientRect();
               triggerParticleBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
             }
 
@@ -719,7 +797,7 @@
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       requestAnimationFrame(() => {
-        renderFloatingButton();
+        renderAllButtons();
         renderSearchListBadges();
         checkEasyApplySubmission();
       });
@@ -734,17 +812,17 @@
   // Initial load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      renderFloatingButton();
+      renderAllButtons();
       syncSavedUrlsCache();
     });
   } else {
-    renderFloatingButton();
+    renderAllButtons();
     syncSavedUrlsCache();
   }
 
   window.addEventListener('popstate', () => {
     setTimeout(() => {
-      renderFloatingButton();
+      renderAllButtons();
       syncSavedUrlsCache();
     }, 200);
   });
