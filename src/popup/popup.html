@@ -100,22 +100,50 @@
           </button>
         </div>
 
-        <!-- Metrics Grid -->
-        <div class="jt-metrics-grid">
-          <div class="jt-metric-box">
-            <div class="jt-metric-label">Tracked Jobs</div>
-            <div id="metric-jobs-count" class="jt-metric-value">0</div>
+        <!-- Visual Pipeline Funnel (UI-UX Pro Max) -->
+        <div class="jt-card jt-card-funnel">
+          <div class="jt-card-header">
+            <span class="jt-card-label">Application Pipeline</span>
+            <span id="funnel-conversion-rate" class="jt-badge-conversion">0% Interview Rate</span>
           </div>
-          <div class="jt-metric-box">
-            <div class="jt-metric-label">Default Status</div>
-            <div class="jt-metric-badge">Saved</div>
+          <div class="jt-funnel-track">
+            <button type="button" class="jt-funnel-step step-saved" data-filter="Saved" title="Click to filter by Saved">
+              <span class="jt-funnel-label">Saved</span>
+              <span class="jt-funnel-count" id="count-saved">0</span>
+            </button>
+            <div class="jt-funnel-arrow">›</div>
+            <button type="button" class="jt-funnel-step step-applied" data-filter="Applied" title="Click to filter by Applied">
+              <span class="jt-funnel-label">Applied</span>
+              <span class="jt-funnel-count" id="count-applied">0</span>
+            </button>
+            <div class="jt-funnel-arrow">›</div>
+            <button type="button" class="jt-funnel-step step-interview" data-filter="Interview" title="Click to filter by Interview">
+              <span class="jt-funnel-label">Interview</span>
+              <span class="jt-funnel-count" id="count-interview">0</span>
+            </button>
+            <div class="jt-funnel-arrow">›</div>
+            <button type="button" class="jt-funnel-step step-offer" data-filter="Offer" title="Click to filter by Offer">
+              <span class="jt-funnel-label">Offer</span>
+              <span class="jt-funnel-count" id="count-offer">0</span>
+            </button>
+            <div class="jt-funnel-arrow">›</div>
+            <button type="button" class="jt-funnel-step step-accepted" data-filter="Accepted" title="Click to filter by Accepted">
+              <span class="jt-funnel-label">Accepted</span>
+              <span class="jt-funnel-count" id="count-accepted">0</span>
+            </button>
           </div>
         </div>
 
         <!-- Recent Jobs Activity -->
         <div class="jt-card jt-card-activity">
           <div class="jt-card-header">
-            <span class="jt-card-label">Recent Applications</span>
+            <div class="jt-filter-indicator">
+              <span class="jt-card-label">Applications</span>
+              <span id="active-filter-badge" class="jt-filter-chip" style="display: none;">
+                <span id="active-filter-name">All</span>
+                <button type="button" id="btn-clear-filter" aria-label="Clear filter">×</button>
+              </span>
+            </div>
             <span id="activity-count-text" class="jt-text-muted-sm">0 saved</span>
           </div>
           <div id="recent-jobs-list" class="jt-jobs-list">

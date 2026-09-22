@@ -34,6 +34,8 @@ assert(manifest.name === 'Job Tracker LN', 'Name is "Job Tracker LN"');
 assert(manifest.permissions.includes('storage'), 'Permissions include storage');
 assert(manifest.permissions.includes('identity'), 'Permissions include identity');
 assert(manifest.permissions.includes('tabs'), 'Permissions include tabs');
+assert(manifest.commands && manifest.commands.save_job_shortcut, 'Commands include save_job_shortcut');
+assert(manifest.commands.save_job_shortcut.suggested_key.default === 'Alt+S', 'save_job_shortcut default key is Alt+S');
 
 console.log('\n--- 2. Testing Icon Assets ---');
 const iconSizes = [16, 48, 128];

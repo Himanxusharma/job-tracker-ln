@@ -9,7 +9,8 @@ import {
   appendJobRow,
   deleteJobRow,
   verifyAndSetupSheet,
-  fetchAllSheetJobs
+  fetchAllSheetJobs,
+  updateJobStatusAndNotes
 } from './sheets-api.js';
 
 import {
@@ -54,6 +55,16 @@ async function removeAuthToken(token) {
     });
   });
 }
+
+// Keyboard Shortcut Command Listener (Alt+S)
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'save_job_shortcut') {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.id) {
+      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_SAVE_SHORTCUT' }).catch(() => {});
+    }
+  }
+});
 
 // Runtime message router
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -239,7 +250,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       }
 
-      // 8. Disconnect sheet & logout
+      // 8. Update Status and Notes for a job
+      if (action === 'UPDATE_JOB_DETAILS') {
+        const { sheetId } = await getSettings();
+        if (!sheetId) {
+          return sendResponse({ success: false, error: 'No sheet connected.' });
+        }
+
+        const { jobLink, status, notes, rowIndex } = message;
+        const normalizedUrl = normalizeJobUrl(jobLink);
+
+        let token = await getAuthToken(true);
+        await updateJobStatusAndNotes(token, sheetId, rowIndex, status, notes, normalizedUrl);
+
+        // Update local cache
+        const cache = await getSavedJobsCache();
+        if (cache[normalizedUrl]) {
+          cache[normalizedUrl].status = status;
+          cache[normalizedUrl].notes = notes;
+          await replaceSavedJobsCache(cache);
+        }
+
+        return sendResponse({ success: true, status, notes });
+      }
+
+      // 9. Get all saved URLs for search list badging
+      if (action === 'GET_SAVED_URLS') {
+        const cache = await getSavedJobsCache();
+        return sendResponse({ savedJobs: cache });
+      }
+
+      // 10. Disconnect sheet & logout
       if (action === 'DISCONNECT') {
         try {
           const token = await getAuthToken(false);

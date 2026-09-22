@@ -41,6 +41,15 @@
     "identity",
     "tabs"
   ],
+  "commands": {
+    "save_job_shortcut": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Alt+S"
+      },
+      "description": "Save the current LinkedIn job posting"
+    }
+  },
   "host_permissions": [
     "https://*.linkedin.com/jobs/*",
     "https://sheets.googleapis.com/*",

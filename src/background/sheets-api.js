@@ -416,3 +416,39 @@ export async function fetchAllSheetJobs(token, sheetId) {
 
   return jobMap;
 }
+
+/**
+ * Updates Status and Notes for a specific job row.
+ */
+export async function updateJobStatusAndNotes(token, sheetId, rowIndex, status, notes, jobLink = '') {
+  const meta = await sheetsFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`, token);
+  const tabTitle = meta.sheets[0].properties.title;
+
+  let targetRow = rowIndex;
+
+  // Fallback: If rowIndex is not provided or outdated, look up by jobLink
+  if (!targetRow && jobLink) {
+    const existingJobs = await fetchAllSheetJobs(token, sheetId);
+    if (existingJobs[jobLink] && existingJobs[jobLink].rowIndex) {
+      targetRow = existingJobs[jobLink].rowIndex;
+    }
+  }
+
+  if (!targetRow || targetRow < 2) {
+    throw new Error('Could not determine target row for update in Google Sheets.');
+  }
+
+  const range = `${encodeURIComponent(tabTitle)}!F${targetRow}:G${targetRow}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`;
+
+  await sheetsFetch(url, token, {
+    method: 'PUT',
+    body: JSON.stringify({
+      range,
+      majorDimension: 'ROWS',
+      values: [[status || 'Saved', notes || '']]
+    })
+  });
+
+  return { success: true, rowIndex: targetRow };
+}
