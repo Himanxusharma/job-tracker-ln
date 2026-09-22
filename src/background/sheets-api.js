@@ -692,6 +692,7 @@ export async function fetchAllSheetJobs(token, sheetId) {
         notes,
         rowIndex
       };
+    }
   });
 
   return jobMap;
